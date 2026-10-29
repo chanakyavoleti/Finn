@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-main: #FBFBF9;
+    --bg-surface: #FFFFFF;
+    --bg-surface-subtle: #F6F7F5;
+    --bg-surface-elevated: #FFFFFF;
+    --border-subtle: #E8EAE6;
+    --border-strong: #D1D5DB;
+    
+    --text-primary: #141716;
+    --text-secondary: #58605C;
+    --text-muted: #8A928E;
+
+    --brand-forest: #1B4332;
+    --brand-forest-hover: #143326;
+    --brand-forest-light: #EBF3EE;
+    --brand-forest-border: #C2DBCB;
+
+    --finance-positive: #166534;
+    --finance-positive-bg: #F0FDF4;
+    --finance-positive-border: #BBF7D0;
+
+    --finance-negative: #991B1B;
+    --finance-negative-bg: #FEF2F2;
+    --finance-negative-border: #FECACA;
+
+    --finance-warning: #92400E;
+    --finance-warning-bg: #FFFBEB;
+    --finance-warning-border: #FDE68A;
+
+    --font-sans: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  .dark {
+    --bg-main: #0F1210;
+    --bg-surface: #151917;
+    --bg-surface-subtle: #1C221F;
+    --bg-surface-elevated: #202723;
+    --border-subtle: #242D28;
+    --border-strong: #37443D;
+
+    --text-primary: #F0F3F1;
+    --text-secondary: #9BA6A0;
+    --text-muted: #6B7771;
+
+    --brand-forest: #2D6A4F;
+    --brand-forest-hover: #377E5E;
+    --brand-forest-light: #16261E;
+    --brand-forest-border: #234D39;
+
+    --finance-positive: #4ADE80;
+    --finance-positive-bg: #0E2718;
+    --finance-positive-border: #165630;
+
+    --finance-negative: #F87171;
+    --finance-negative-bg: #2B1313;
+    --finance-negative-border: #5C1D1D;
+
+    --finance-warning: #FBBF24;
+    --finance-warning-bg: #2B210B;
+    --finance-warning-border: #5C4512;
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    letter-spacing: -0.011em;
+  }
+}
+
+/* Tabular numerals for financial alignment */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Subtle custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+
+/* Focus indicator conforming to accessibility guidelines */
+.finn-focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+.finn-focus:focus-visible {
+  outline: 2px solid var(--brand-forest);
+  outline-offset: 2px;
+}
