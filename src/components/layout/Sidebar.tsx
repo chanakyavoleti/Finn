@@ -16,7 +16,8 @@ import {
   Sun,
   Moon,
   Database,
-  ShieldCheck
+  ShieldCheck,
+  User
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -43,6 +44,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     toggleTheme, 
     isDemoMode, 
     toggleDemoMode,
+    currentUser,
+    setIsAuthModalOpen,
     accounts
   } = useFinance();
 
@@ -155,8 +158,34 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
         ))}
       </div>
 
-      {/* Footer Controls: Environment & Theme */}
+      {/* Footer Controls: User Session, Environment & Theme */}
       <div className="p-3 border-t border-[#E8EAE6] dark:border-[#222925] space-y-2 bg-[#FAFAF8] dark:bg-[#111312]">
+        {/* User Account / Session Pill */}
+        <button
+          onClick={() => setIsAuthModalOpen(true)}
+          className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-[11px] border border-[#E8EAE6] dark:border-[#252E28] bg-white dark:bg-[#151917] hover:bg-[#F6F7F5] dark:hover:bg-[#1A1F1C] transition-colors cursor-pointer finn-focus text-left"
+          title="Manage user session or switch accounts"
+        >
+          <div className="flex items-center gap-2 truncate">
+            <div className="w-5 h-5 rounded-full bg-[#EBF3EE] dark:bg-[#1E2922] text-[#1B4332] dark:text-[#52B788] flex items-center justify-center font-bold text-[9px] shrink-0">
+              {currentUser
+                ? currentUser.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+                : <User size={11} />}
+            </div>
+            <div className="truncate">
+              <div className="font-semibold text-[#141716] dark:text-[#F0F3F1] truncate leading-tight">
+                {currentUser ? currentUser.fullName : 'Guest'}
+              </div>
+              <div className="text-[10px] text-[#8A928E] dark:text-[#6B7771] truncate">
+                {currentUser ? currentUser.email : 'Click to sign in'}
+              </div>
+            </div>
+          </div>
+          <span className="text-[10px] font-medium text-[#1B4332] dark:text-[#52B788] shrink-0 ml-1">
+            {currentUser ? 'Switch' : 'Login'}
+          </span>
+        </button>
+
         {/* Demonstration Mode Switch */}
         <button
           onClick={toggleDemoMode}

@@ -1,19 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
-import { TransactionType, PaymentMethod } from '../../types';
+import { TransactionType, PaymentMethod, Transaction } from '../../types';
 
 interface AddTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialTransaction?: Transaction | null;
 }
 
 export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   isOpen,
   onClose,
+  initialTransaction,
 }) => {
-  const { accounts, addTransaction, primaryCurrency } = useFinance();
+  const { accounts, addTransaction, updateTransaction, primaryCurrency } = useFinance();
 
   const [type, setType] = useState<TransactionType>('expense');
   const [merchant, setMerchant] = useState('');
@@ -26,6 +28,34 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('upi');
   const [upiId, setUpiId] = useState('');
   const [utrNumber, setUtrNumber] = useState('');
+
+  useEffect(() => {
+    if (initialTransaction) {
+      setType(initialTransaction.type);
+      setMerchant(initialTransaction.merchant);
+      setAmount(initialTransaction.amount.toString());
+      setCategory(initialTransaction.category);
+      setAccountId(initialTransaction.accountId);
+      setDestinationAccountId(initialTransaction.destinationAccountId || accounts[1]?.id || 'acc-2');
+      setDate(initialTransaction.date);
+      setDescription(initialTransaction.description);
+      setPaymentMethod(initialTransaction.paymentMethod || 'upi');
+      setUpiId(initialTransaction.upiId || '');
+      setUtrNumber(initialTransaction.utrNumber || '');
+    } else {
+      setType('expense');
+      setMerchant('');
+      setAmount('');
+      setCategory('Groceries');
+      setAccountId(accounts[0]?.id || 'acc-1');
+      setDestinationAccountId(accounts[1]?.id || 'acc-2');
+      setDate(new Date().toISOString().split('T')[0]);
+      setDescription('');
+      setPaymentMethod('upi');
+      setUpiId('');
+      setUtrNumber('');
+    }
+  }, [initialTransaction, isOpen, accounts]);
 
   const categories = [
     'Housing', 'Groceries', 'Dining', 'Utilities', 
@@ -42,30 +72,42 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
     const selectedAcc = accounts.find(a => a.id === accountId);
 
-    addTransaction({
-      accountId,
-      accountName: selectedAcc ? selectedAcc.name : 'Primary Account',
-      destinationAccountId: type === 'transfer' ? destinationAccountId : undefined,
-      date,
-      amount: parsedAmount,
-      currency: primaryCurrency,
-      type,
-      category,
-      merchant: merchant.trim(),
-      description: description.trim() || `${category} - ${merchant.trim()}`,
-      status: 'posted',
-      paymentMethod,
-      upiId: paymentMethod === 'upi' && upiId.trim() ? upiId.trim() : undefined,
-      utrNumber: utrNumber.trim() ? utrNumber.trim() : undefined,
-      tags: [category, paymentMethod.toUpperCase()]
-    });
+    if (initialTransaction) {
+      updateTransaction(initialTransaction.id, {
+        accountId,
+        accountName: selectedAcc ? selectedAcc.name : 'Primary Account',
+        destinationAccountId: type === 'transfer' ? destinationAccountId : undefined,
+        date,
+        amount: parsedAmount,
+        currency: primaryCurrency,
+        type,
+        category,
+        merchant: merchant.trim(),
+        description: description.trim() || `${category} - ${merchant.trim()}`,
+        paymentMethod,
+        upiId: paymentMethod === 'upi' && upiId.trim() ? upiId.trim() : undefined,
+        utrNumber: utrNumber.trim() ? utrNumber.trim() : undefined,
+      });
+    } else {
+      addTransaction({
+        accountId,
+        accountName: selectedAcc ? selectedAcc.name : 'Primary Account',
+        destinationAccountId: type === 'transfer' ? destinationAccountId : undefined,
+        date,
+        amount: parsedAmount,
+        currency: primaryCurrency,
+        type,
+        category,
+        merchant: merchant.trim(),
+        description: description.trim() || `${category} - ${merchant.trim()}`,
+        status: 'posted',
+        paymentMethod,
+        upiId: paymentMethod === 'upi' && upiId.trim() ? upiId.trim() : undefined,
+        utrNumber: utrNumber.trim() ? utrNumber.trim() : undefined,
+        tags: [category, paymentMethod.toUpperCase()]
+      });
+    }
 
-    // Reset and close
-    setMerchant('');
-    setAmount('');
-    setDescription('');
-    setUpiId('');
-    setUtrNumber('');
     onClose();
   };
 
@@ -73,8 +115,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Record Financial Transaction"
-      description="Post a double-entry cash flow or UPI transaction to your personal finance ledger."
+      title={initialTransaction ? 'Edit Transaction Entry' : 'Record Financial Transaction'}
+      description={
+        initialTransaction
+          ? 'Update financial ledger record with double-entry balance reconciliation.'
+          : 'Post a double-entry cash flow or UPI transaction to your personal finance ledger.'
+      }
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
         {/* Type Toggle: Expense / Income / Transfer / Refund / Investment */}
@@ -287,7 +333,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             Cancel
           </Button>
           <Button type="submit" variant="primary" size="sm">
-            Post Record
+            {initialTransaction ? 'Save Changes' : 'Post Record'}
           </Button>
         </div>
       </form>

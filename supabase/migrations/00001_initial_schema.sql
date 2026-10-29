@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can only read own profile" ON public.profiles FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Users can only update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Users can insert own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
 CREATE TABLE IF NOT EXISTS public.user_preferences (
     user_id UUID PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -231,7 +232,12 @@ CREATE TABLE IF NOT EXISTS public.shared_expenses (
 );
 
 ALTER TABLE public.shared_expenses ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Group members can view shared expenses" ON public.shared_expenses FOR ALL 
+CREATE POLICY "Group creators and participants can view shared expenses" ON public.shared_expenses FOR SELECT 
+    USING (
+        EXISTS (SELECT 1 FROM public.bill_groups WHERE id = shared_expenses.group_id AND creator_id = auth.uid())
+        OR EXISTS (SELECT 1 FROM public.expense_splits WHERE expense_id = shared_expenses.id AND participant_user_id = auth.uid())
+    );
+CREATE POLICY "Group creators can manage shared expenses" ON public.shared_expenses FOR ALL 
     USING (EXISTS (SELECT 1 FROM public.bill_groups WHERE id = shared_expenses.group_id AND creator_id = auth.uid()));
 
 CREATE TABLE IF NOT EXISTS public.expense_splits (
@@ -245,7 +251,19 @@ CREATE TABLE IF NOT EXISTS public.expense_splits (
 );
 
 ALTER TABLE public.expense_splits ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Splits viewable by group owner" ON public.expense_splits FOR ALL 
+CREATE POLICY "Splits viewable by group owner and assigned participant" ON public.expense_splits FOR SELECT 
+    USING (
+        participant_user_id = auth.uid() OR
+        EXISTS (
+            SELECT 1 FROM public.shared_expenses e 
+            JOIN public.bill_groups g ON g.id = e.group_id 
+            WHERE e.id = expense_splits.expense_id AND g.creator_id = auth.uid()
+        )
+    );
+CREATE POLICY "Participants can mark own split settled" ON public.expense_splits FOR UPDATE
+    USING (participant_user_id = auth.uid())
+    WITH CHECK (participant_user_id = auth.uid());
+CREATE POLICY "Group owners can manage all splits" ON public.expense_splits FOR ALL 
     USING (EXISTS (
         SELECT 1 FROM public.shared_expenses e 
         JOIN public.bill_groups g ON g.id = e.group_id 

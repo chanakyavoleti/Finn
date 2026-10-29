@@ -7,7 +7,8 @@ import {
   Menu, 
   Calendar,
   AlertCircle,
-  FileSpreadsheet
+  FileSpreadsheet,
+  User
 } from 'lucide-react';
 import { DatePeriod } from '../../types';
 import { CurrencyCode } from '../../utils/currency';
@@ -31,7 +32,9 @@ export const Header: React.FC<HeaderProps> = ({
     isDemoMode,
     accounts,
     primaryCurrency,
-    setPrimaryCurrency
+    setPrimaryCurrency,
+    currentUser,
+    setIsAuthModalOpen
   } = useFinance();
 
   const [syncing, setSyncing] = useState(false);
@@ -203,6 +206,22 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="hidden xs:inline">Record Transaction</span>
           <span className="xs:hidden">Add</span>
         </Button>
+
+        {/* User Account / Auth Trigger */}
+        <button
+          onClick={() => setIsAuthModalOpen(true)}
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded-md border border-[#E8EAE6] dark:border-[#252E28] hover:bg-[#F6F7F5] dark:hover:bg-[#1A1F1C] text-xs transition-colors finn-focus cursor-pointer"
+          title={currentUser ? `Signed in as ${currentUser.fullName} (${currentUser.email})` : 'Sign In / Register'}
+        >
+          <div className="w-5 h-5 rounded-full bg-[#EBF3EE] dark:bg-[#1E2922] text-[#1B4332] dark:text-[#52B788] flex items-center justify-center font-bold text-[10px]">
+            {currentUser
+              ? currentUser.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+              : <User size={12} />}
+          </div>
+          <span className="hidden md:inline font-medium text-[#141716] dark:text-[#F0F3F1] max-w-[100px] truncate">
+            {currentUser ? currentUser.fullName.split(' ')[0] : 'Sign In'}
+          </span>
+        </button>
       </div>
     </header>
   );

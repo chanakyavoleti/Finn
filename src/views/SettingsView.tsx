@@ -3,7 +3,7 @@ import { useFinance } from '../context/FinanceContext';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
-import { Moon, Sun, Database, Shield, Download, Trash2, Key } from 'lucide-react';
+import { Moon, Sun, Database, Shield, Download, Trash2, Key, User, LogOut } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
   const { 
@@ -13,7 +13,10 @@ export const SettingsView: React.FC = () => {
     toggleDemoMode, 
     addToast,
     accounts,
-    transactions
+    transactions,
+    currentUser,
+    logoutUser,
+    setIsAuthModalOpen
   } = useFinance();
 
   const handleExportAllJSON = () => {
@@ -79,6 +82,70 @@ export const SettingsView: React.FC = () => {
               </p>
             </div>
             <Badge variant="positive" size="sm">Standard Restrained</Badge>
+          </div>
+        </div>
+      </Card>
+
+      {/* Account & Multi-User Isolation */}
+      <Card title="Account Identity & Session Isolation" subtitle="Manage authenticated user credentials and workspace segregation">
+        <div className="space-y-4 text-xs">
+          <div className="flex items-center justify-between pb-3 border-b border-[#E8EAE6] dark:border-[#242D28]">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-[#EBF3EE] dark:bg-[#1E2922] text-[#1B4332] dark:text-[#52B788] flex items-center justify-center font-bold text-xs">
+                {currentUser
+                  ? currentUser.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+                  : <User size={14} />}
+              </div>
+              <div>
+                <div className="font-semibold text-[#141716] dark:text-[#F0F3F1]">
+                  {currentUser ? currentUser.fullName : 'Guest / Unauthenticated Session'}
+                </div>
+                <div className="text-[11px] text-[#58605C] dark:text-[#9BA6A0]">
+                  {currentUser ? `${currentUser.email} · ID: ${currentUser.id}` : 'Running with temporary guest memory'}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAuthModalOpen(true)}
+              >
+                {currentUser ? 'Switch User' : 'Sign In / Register'}
+              </Button>
+              {currentUser && (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  icon={<LogOut size={13} />}
+                  onClick={logoutUser}
+                >
+                  Sign Out
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            <div className="p-2.5 rounded border border-[#E8EAE6] dark:border-[#242D28] bg-[#FAFAF8] dark:bg-[#161B18]">
+              <span className="text-[11px] text-[#8A928E] dark:text-[#6B7771]">Default Reporting:</span>
+              <div className="font-semibold text-[#141716] dark:text-[#F0F3F1] mt-0.5">
+                {currentUser?.defaultCurrency || 'INR'} (Indian Rupee)
+              </div>
+            </div>
+            <div className="p-2.5 rounded border border-[#E8EAE6] dark:border-[#242D28] bg-[#FAFAF8] dark:bg-[#161B18]">
+              <span className="text-[11px] text-[#8A928E] dark:text-[#6B7771]">Fiscal Year Cycle:</span>
+              <div className="font-semibold text-[#141716] dark:text-[#F0F3F1] mt-0.5">
+                {currentUser?.fiscalYearType === 'calendar' ? 'Jan 1 – Dec 31' : 'Apr 1 – Mar 31 (Indian)'}
+              </div>
+            </div>
+            <div className="p-2.5 rounded border border-[#E8EAE6] dark:border-[#242D28] bg-[#FAFAF8] dark:bg-[#161B18]">
+              <span className="text-[11px] text-[#8A928E] dark:text-[#6B7771]">Isolation Boundary:</span>
+              <div className="font-semibold text-[#166534] dark:text-[#4ADE80] mt-0.5">
+                Strict Multi-Tenant RLS
+              </div>
+            </div>
           </div>
         </div>
       </Card>

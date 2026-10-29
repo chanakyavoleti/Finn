@@ -36,6 +36,8 @@ interface FinanceContextType {
   loginUser: (email: string, pass: string) => Promise<void>;
   registerUser: (email: string, name: string, pass: string) => Promise<void>;
   logoutUser: () => void;
+  isAuthModalOpen: boolean;
+  setIsAuthModalOpen: (open: boolean) => void;
 
   accounts: Account[];
   transactions: Transaction[];
@@ -48,6 +50,7 @@ interface FinanceContextType {
 
   // Action methods
   addTransaction: (tx: Omit<Transaction, 'id'>) => void;
+  updateTransaction: (id: string, tx: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
   addBudget: (budget: Omit<Budget, 'id' | 'spent'>) => void;
   updateBudgetLimit: (id: string, limit: number) => void;
@@ -101,6 +104,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [primaryCurrency, setPrimaryCurrency] = useState<CurrencyCode>('INR');
   const [activePage, setActivePage] = useState<NavPage>('dashboard');
   const [selectedPeriod, setSelectedPeriod] = useState<DatePeriod>('this_month');
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Authentication State
   const [session, setSession] = useState<UserSession | null>(() => {
@@ -121,15 +125,81 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   });
 
-  // Application Data
-  const [accounts, setAccounts] = useState<Account[]>(() => isDemoMode ? INITIAL_ACCOUNTS : []);
-  const [transactions, setTransactions] = useState<Transaction[]>(() => isDemoMode ? INITIAL_TRANSACTIONS : []);
-  const [budgets, setBudgets] = useState<Budget[]>(() => isDemoMode ? INITIAL_BUDGETS : []);
-  const [holdings, setHoldings] = useState<Holding[]>(() => isDemoMode ? INITIAL_HOLDINGS : []);
-  const [goals, setGoals] = useState<SavingsGoal[]>(() => isDemoMode ? INITIAL_SAVINGS_GOALS : []);
-  const [splitExpenses, setSplitExpenses] = useState<SplitExpense[]>(() => isDemoMode ? INITIAL_SPLIT_EXPENSES : []);
-  const [insights, setInsights] = useState<AiInsight[]>(() => isDemoMode ? AI_INSIGHTS : []);
+  const uid = session ? session.user.id : 'demo';
+
+  const loadSavedData = <T,>(key: string, fallback: T): T => {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {
+      console.error('Failed to parse from localStorage', key, e);
+    }
+    return fallback;
+  };
+
+  // Application Data with persistent local storage
+  const [accounts, setAccounts] = useState<Account[]>(() => 
+    loadSavedData(`finn_accounts_${uid}`, isDemoMode ? INITIAL_ACCOUNTS : [])
+  );
+  const [transactions, setTransactions] = useState<Transaction[]>(() => 
+    loadSavedData(`finn_transactions_${uid}`, isDemoMode ? INITIAL_TRANSACTIONS : [])
+  );
+  const [budgets, setBudgets] = useState<Budget[]>(() => 
+    loadSavedData(`finn_budgets_${uid}`, isDemoMode ? INITIAL_BUDGETS : [])
+  );
+  const [holdings, setHoldings] = useState<Holding[]>(() => 
+    loadSavedData(`finn_holdings_${uid}`, isDemoMode ? INITIAL_HOLDINGS : [])
+  );
+  const [goals, setGoals] = useState<SavingsGoal[]>(() => 
+    loadSavedData(`finn_goals_${uid}`, isDemoMode ? INITIAL_SAVINGS_GOALS : [])
+  );
+  const [splitExpenses, setSplitExpenses] = useState<SplitExpense[]>(() => 
+    loadSavedData(`finn_splitExpenses_${uid}`, isDemoMode ? INITIAL_SPLIT_EXPENSES : [])
+  );
+  const [insights, setInsights] = useState<AiInsight[]>(() => 
+    loadSavedData(`finn_insights_${uid}`, isDemoMode ? AI_INSIGHTS : [])
+  );
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // Persistent storage synchronizers
+  useEffect(() => {
+    const currentUid = session?.user?.id || 'demo';
+    localStorage.setItem(`finn_accounts_${currentUid}`, JSON.stringify(accounts));
+  }, [accounts, session]);
+
+  useEffect(() => {
+    const currentUid = session?.user?.id || 'demo';
+    localStorage.setItem(`finn_transactions_${currentUid}`, JSON.stringify(transactions));
+  }, [transactions, session]);
+
+  useEffect(() => {
+    const currentUid = session?.user?.id || 'demo';
+    localStorage.setItem(`finn_budgets_${currentUid}`, JSON.stringify(budgets));
+  }, [budgets, session]);
+
+  useEffect(() => {
+    const currentUid = session?.user?.id || 'demo';
+    localStorage.setItem(`finn_holdings_${currentUid}`, JSON.stringify(holdings));
+  }, [holdings, session]);
+
+  useEffect(() => {
+    const currentUid = session?.user?.id || 'demo';
+    localStorage.setItem(`finn_goals_${currentUid}`, JSON.stringify(goals));
+  }, [goals, session]);
+
+  useEffect(() => {
+    const currentUid = session?.user?.id || 'demo';
+    localStorage.setItem(`finn_splitExpenses_${currentUid}`, JSON.stringify(splitExpenses));
+  }, [splitExpenses, session]);
+
+  const switchUserData = (newUid: string) => {
+    setAccounts(loadSavedData(`finn_accounts_${newUid}`, isDemoMode ? INITIAL_ACCOUNTS : []));
+    setTransactions(loadSavedData(`finn_transactions_${newUid}`, isDemoMode ? INITIAL_TRANSACTIONS : []));
+    setBudgets(loadSavedData(`finn_budgets_${newUid}`, isDemoMode ? INITIAL_BUDGETS : []));
+    setHoldings(loadSavedData(`finn_holdings_${newUid}`, isDemoMode ? INITIAL_HOLDINGS : []));
+    setGoals(loadSavedData(`finn_goals_${newUid}`, isDemoMode ? INITIAL_SAVINGS_GOALS : []));
+    setSplitExpenses(loadSavedData(`finn_splitExpenses_${newUid}`, isDemoMode ? INITIAL_SPLIT_EXPENSES : []));
+  };
 
   // Apply Theme class to document element
   useEffect(() => {
@@ -192,6 +262,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const userSession = await AuthService.login(email, pass);
     setSession(userSession);
     setPrimaryCurrency(userSession.user.defaultCurrency);
+    switchUserData(userSession.user.id);
     addToast('Welcome back', 'success', userSession.user.fullName);
   };
 
@@ -199,12 +270,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const userSession = await AuthService.register(email, name, pass);
     setSession(userSession);
     setPrimaryCurrency('INR');
+    switchUserData(userSession.user.id);
     addToast('Account created successfully', 'success', `Welcome to FINN, ${name}`);
   };
 
   const logoutUser = () => {
     AuthService.logout();
     setSession(null);
+    switchUserData('guest');
     addToast('Logged out', 'info', 'Your session has ended.');
   };
 
@@ -233,7 +306,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return acc;
     }));
 
-    // Update budget spent if it's an expense
+    // Update budget spent: expenses add to spent, refunds decrease spent
     if (txData.type === 'expense') {
       setBudgets(prev => prev.map(b => {
         if (b.categoryName.toLowerCase().includes(txData.category.toLowerCase()) || 
@@ -242,14 +315,127 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
         return b;
       }));
+    } else if (txData.type === 'refund') {
+      setBudgets(prev => prev.map(b => {
+        if (b.categoryName.toLowerCase().includes(txData.category.toLowerCase()) || 
+            txData.category.toLowerCase().includes(b.categoryName.toLowerCase())) {
+          return { ...b, spent: Math.max(0, subtractMoney(b.spent, txData.amount)) };
+        }
+        return b;
+      }));
     }
 
     addToast('Transaction recorded', 'success', `${txData.merchant} — ${formatAmount(txData.amount)}`);
   };
 
+  const updateTransaction = (id: string, updatedData: Partial<Transaction>) => {
+    const oldTx = transactions.find(t => t.id === id);
+    if (!oldTx) return;
+
+    const newTx: Transaction = { ...oldTx, ...updatedData };
+
+    // Revert old transaction's effect on account balances & apply new transaction's effect
+    setAccounts(prev => prev.map(acc => {
+      let balance = acc.balance;
+
+      // Reverse old source account effect
+      if (acc.id === oldTx.accountId) {
+        if (oldTx.type === 'income' || oldTx.type === 'refund') {
+          balance = subtractMoney(balance, oldTx.amount);
+        } else if (oldTx.type === 'expense' || oldTx.type === 'transfer' || oldTx.type === 'investment_contribution') {
+          balance = addMoney(balance, oldTx.amount);
+        }
+      }
+      // Reverse old transfer destination effect
+      if (oldTx.type === 'transfer' && acc.id === oldTx.destinationAccountId) {
+        balance = subtractMoney(balance, oldTx.amount);
+      }
+
+      // Apply new source account effect
+      if (acc.id === newTx.accountId) {
+        if (newTx.type === 'income' || newTx.type === 'refund') {
+          balance = addMoney(balance, newTx.amount);
+        } else if (newTx.type === 'expense' || newTx.type === 'transfer' || newTx.type === 'investment_contribution') {
+          balance = subtractMoney(balance, newTx.amount);
+        }
+      }
+      // Apply new transfer destination effect
+      if (newTx.type === 'transfer' && acc.id === newTx.destinationAccountId) {
+        balance = addMoney(balance, newTx.amount);
+      }
+
+      return { ...acc, balance };
+    }));
+
+    // Revert old budget spent
+    if (oldTx.type === 'expense' || oldTx.type === 'refund') {
+      setBudgets(prev => prev.map(b => {
+        let spent = b.spent;
+        if (b.categoryName.toLowerCase().includes(oldTx.category.toLowerCase()) || 
+            oldTx.category.toLowerCase().includes(b.categoryName.toLowerCase())) {
+          if (oldTx.type === 'expense') spent = Math.max(0, subtractMoney(spent, oldTx.amount));
+          if (oldTx.type === 'refund') spent = addMoney(spent, oldTx.amount);
+        }
+        return { ...b, spent };
+      }));
+    }
+
+    // Apply new budget spent
+    if (newTx.type === 'expense' || newTx.type === 'refund') {
+      setBudgets(prev => prev.map(b => {
+        let spent = b.spent;
+        if (b.categoryName.toLowerCase().includes(newTx.category.toLowerCase()) || 
+            newTx.category.toLowerCase().includes(b.categoryName.toLowerCase())) {
+          if (newTx.type === 'expense') spent = addMoney(spent, newTx.amount);
+          if (newTx.type === 'refund') spent = Math.max(0, subtractMoney(spent, newTx.amount));
+        }
+        return { ...b, spent };
+      }));
+    }
+
+    setTransactions(prev => prev.map(t => t.id === id ? newTx : t));
+    addToast('Transaction updated', 'success', `${newTx.merchant} — ${formatAmount(newTx.amount)}`);
+  };
+
   const deleteTransaction = (id: string) => {
     const tx = transactions.find(t => t.id === id);
     if (!tx) return;
+
+    // Reverse effects on account balances
+    setAccounts(prev => prev.map(acc => {
+      let balance = acc.balance;
+      if (acc.id === tx.accountId) {
+        if (tx.type === 'income' || tx.type === 'refund') {
+          balance = subtractMoney(balance, tx.amount);
+        } else if (tx.type === 'expense' || tx.type === 'transfer' || tx.type === 'investment_contribution') {
+          balance = addMoney(balance, tx.amount);
+        }
+      }
+      if (tx.type === 'transfer' && acc.id === tx.destinationAccountId) {
+        balance = subtractMoney(balance, tx.amount);
+      }
+      return { ...acc, balance };
+    }));
+
+    // Reverse effects on budget spent
+    if (tx.type === 'expense') {
+      setBudgets(prev => prev.map(b => {
+        if (b.categoryName.toLowerCase().includes(tx.category.toLowerCase()) || 
+            tx.category.toLowerCase().includes(b.categoryName.toLowerCase())) {
+          return { ...b, spent: Math.max(0, subtractMoney(b.spent, tx.amount)) };
+        }
+        return b;
+      }));
+    } else if (tx.type === 'refund') {
+      setBudgets(prev => prev.map(b => {
+        if (b.categoryName.toLowerCase().includes(tx.category.toLowerCase()) || 
+            tx.category.toLowerCase().includes(b.categoryName.toLowerCase())) {
+          return { ...b, spent: addMoney(b.spent, tx.amount) };
+        }
+        return b;
+      }));
+    }
+
     setTransactions(prev => prev.filter(t => t.id !== id));
     addToast('Transaction removed', 'info', tx.merchant);
   };
@@ -512,6 +698,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         loginUser,
         registerUser,
         logoutUser,
+        isAuthModalOpen,
+        setIsAuthModalOpen,
         accounts,
         transactions,
         budgets,
@@ -521,6 +709,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         insights,
         currencyPairs: CURRENCY_PAIRS,
         addTransaction,
+        updateTransaction,
         deleteTransaction,
         addBudget,
         updateBudgetLimit,

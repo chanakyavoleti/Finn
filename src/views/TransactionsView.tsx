@@ -9,11 +9,14 @@ import {
   Download, 
   Plus, 
   Trash2, 
+  Pencil,
   Receipt,
   ArrowUpDown,
   Filter
 } from 'lucide-react';
-import { TransactionType } from '../types';
+import { TransactionType, Transaction } from '../types';
+import { sanitizeCsvCell } from '../utils/currency';
+import { AddTransactionModal } from '../components/modals/AddTransactionModal';
 
 interface TransactionsViewProps {
   onOpenAddTransaction: () => void;
@@ -22,6 +25,7 @@ interface TransactionsViewProps {
 export const TransactionsView: React.FC<TransactionsViewProps> = ({ onOpenAddTransaction }) => {
   const { transactions, deleteTransaction, accounts, formatAmount, primaryCurrency } = useFinance();
 
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedType, setSelectedType] = useState<string>('all');
@@ -86,11 +90,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ onOpenAddTra
       t.id,
       t.date,
       t.type,
-      `"${t.category}"`,
-      `"${t.merchant.replace(/"/g, '""')}"`,
-      `"${t.description.replace(/"/g, '""')}"`,
+      sanitizeCsvCell(t.category),
+      sanitizeCsvCell(t.merchant),
+      sanitizeCsvCell(t.description),
       t.amount.toFixed(2),
-      `"${t.accountName || ''}"`
+      sanitizeCsvCell(t.accountName || '')
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
@@ -297,14 +301,24 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ onOpenAddTra
                         </span>
                       </td>
                       <td className="py-2.5 px-4 text-center">
-                        <button
-                          onClick={() => deleteTransaction(tx.id)}
-                          className="p-1 text-[#8A928E] hover:text-[#991B1B] dark:text-[#6B7771] dark:hover:text-[#F87171] rounded finn-focus cursor-pointer transition-colors"
-                          title="Delete entry"
-                          aria-label={`Delete transaction from ${tx.merchant}`}
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => setEditingTransaction(tx)}
+                            className="p-1 text-[#8A928E] hover:text-[#1B4332] dark:text-[#6B7771] dark:hover:text-[#52B788] rounded finn-focus cursor-pointer transition-colors"
+                            title="Edit transaction"
+                            aria-label={`Edit transaction from ${tx.merchant}`}
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            onClick={() => deleteTransaction(tx.id)}
+                            className="p-1 text-[#8A928E] hover:text-[#991B1B] dark:text-[#6B7771] dark:hover:text-[#F87171] rounded finn-focus cursor-pointer transition-colors"
+                            title="Delete entry"
+                            aria-label={`Delete transaction from ${tx.merchant}`}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -345,6 +359,15 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ onOpenAddTra
             )}
           </div>
         </Card>
+      )}
+
+      {/* Edit Transaction Modal */}
+      {editingTransaction && (
+        <AddTransactionModal
+          isOpen={true}
+          onClose={() => setEditingTransaction(null)}
+          initialTransaction={editingTransaction}
+        />
       )}
     </div>
   );

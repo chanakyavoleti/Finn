@@ -16,11 +16,12 @@ import { AccountsSyncView } from './views/AccountsSyncView';
 import { SettingsView } from './views/SettingsView';
 import { AddTransactionModal } from './components/modals/AddTransactionModal';
 import { ImportStatementModal } from './components/modals/ImportStatementModal';
+import { AuthModal } from './components/modals/AuthModal';
 import { ToastContainer } from './components/common/ToastContainer';
 import { X } from 'lucide-react';
 
 export const App: React.FC = () => {
-  const { activePage } = useFinance();
+  const { activePage, isAuthModalOpen, setIsAuthModalOpen } = useFinance();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
   const [isImportStatementOpen, setIsImportStatementOpen] = useState(false);
@@ -110,6 +111,11 @@ export const App: React.FC = () => {
       <ImportStatementModal
         isOpen={isImportStatementOpen}
         onClose={() => setIsImportStatementOpen(false)}
+      />
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
       />
 
       {/* Feedback Toast Container */}
