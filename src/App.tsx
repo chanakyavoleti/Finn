@@ -8,12 +8,14 @@ import { BudgetsView } from './views/BudgetsView';
 import { AnalyticsView } from './views/AnalyticsView';
 import { InvestmentsView } from './views/InvestmentsView';
 import { GoalsView } from './views/GoalsView';
+import { FireCalculatorView } from './views/FireCalculatorView';
 import { BillSplittingView } from './views/BillSplittingView';
 import { CurrencyConverterView } from './views/CurrencyConverterView';
 import { AiAdvisorView } from './views/AiAdvisorView';
 import { AccountsSyncView } from './views/AccountsSyncView';
 import { SettingsView } from './views/SettingsView';
 import { AddTransactionModal } from './components/modals/AddTransactionModal';
+import { ImportStatementModal } from './components/modals/ImportStatementModal';
 import { ToastContainer } from './components/common/ToastContainer';
 import { X } from 'lucide-react';
 
@@ -21,6 +23,7 @@ export const App: React.FC = () => {
   const { activePage } = useFinance();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
+  const [isImportStatementOpen, setIsImportStatementOpen] = useState(false);
 
   const renderActiveView = () => {
     switch (activePage) {
@@ -36,6 +39,8 @@ export const App: React.FC = () => {
         return <InvestmentsView />;
       case 'goals':
         return <GoalsView />;
+      case 'fire':
+        return <FireCalculatorView />;
       case 'bills':
         return <BillSplittingView />;
       case 'currency':
@@ -87,6 +92,7 @@ export const App: React.FC = () => {
         <Header
           onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
           onOpenAddTransaction={() => setIsAddTransactionOpen(true)}
+          onOpenImportStatement={() => setIsImportStatementOpen(true)}
         />
 
         {/* Scrollable Viewport */}
@@ -99,6 +105,11 @@ export const App: React.FC = () => {
       <AddTransactionModal
         isOpen={isAddTransactionOpen}
         onClose={() => setIsAddTransactionOpen(false)}
+      />
+
+      <ImportStatementModal
+        isOpen={isImportStatementOpen}
+        onClose={() => setIsImportStatementOpen(false)}
       />
 
       {/* Feedback Toast Container */}

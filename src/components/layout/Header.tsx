@@ -6,18 +6,22 @@ import {
   RefreshCw, 
   Menu, 
   Calendar,
-  AlertCircle
+  AlertCircle,
+  FileSpreadsheet
 } from 'lucide-react';
 import { DatePeriod } from '../../types';
+import { CurrencyCode } from '../../utils/currency';
 
 interface HeaderProps {
   onOpenMobileMenu: () => void;
   onOpenAddTransaction: () => void;
+  onOpenImportStatement?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onOpenMobileMenu,
   onOpenAddTransaction,
+  onOpenImportStatement,
 }) => {
   const { 
     activePage, 
@@ -25,7 +29,9 @@ export const Header: React.FC<HeaderProps> = ({
     setSelectedPeriod, 
     syncAllAccounts, 
     isDemoMode,
-    accounts
+    accounts,
+    primaryCurrency,
+    setPrimaryCurrency
   } = useFinance();
 
   const [syncing, setSyncing] = useState(false);
@@ -60,6 +66,10 @@ export const Header: React.FC<HeaderProps> = ({
     goals: { 
       title: 'Savings Milestones', 
       subtitle: 'Target objectives, automated contributions, and timeline forecasts' 
+    },
+    fire: { 
+      title: 'Financial Independence & FIRE Calculator', 
+      subtitle: 'Mathematical retirement horizon projections, inflation adjustments, and sensitivity models' 
     },
     bills: { 
       title: 'Group Expenses & Bill Splitting', 
@@ -141,6 +151,33 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             ))}
           </div>
+        )}
+
+        {/* Currency Switcher */}
+        <select
+          value={primaryCurrency}
+          onChange={(e) => setPrimaryCurrency(e.target.value as CurrencyCode)}
+          className="hidden sm:inline-block px-2 py-1 text-xs font-semibold rounded-md border border-[#E8EAE6] dark:border-[#252E28] bg-white dark:bg-[#1A1F1C] text-[#141716] dark:text-[#F0F3F1] finn-focus cursor-pointer"
+          title="Switch Active Reporting Currency"
+        >
+          <option value="INR">₹ INR</option>
+          <option value="USD">$ USD</option>
+          <option value="EUR">€ EUR</option>
+          <option value="GBP">£ GBP</option>
+        </select>
+
+        {/* Bank Statement CSV Import Trigger */}
+        {onOpenImportStatement && (
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<FileSpreadsheet size={13} />}
+            onClick={onOpenImportStatement}
+            className="hidden sm:inline-flex"
+            title="Import official bank statement CSV"
+          >
+            Import CSV
+          </Button>
         )}
 
         {/* Sync Button */}

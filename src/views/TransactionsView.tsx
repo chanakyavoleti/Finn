@@ -20,7 +20,7 @@ interface TransactionsViewProps {
 }
 
 export const TransactionsView: React.FC<TransactionsViewProps> = ({ onOpenAddTransaction }) => {
-  const { transactions, deleteTransaction, accounts } = useFinance();
+  const { transactions, deleteTransaction, accounts, formatAmount, primaryCurrency } = useFinance();
 
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -239,7 +239,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ onOpenAddTra
                     className="py-2.5 px-4 font-medium text-right cursor-pointer hover:text-[#141716] dark:hover:text-[#F0F3F1] select-none"
                   >
                     <div className="flex items-center justify-end gap-1">
-                      <span>Amount (USD)</span>
+                      <span>Amount ({primaryCurrency})</span>
                       <ArrowUpDown size={11} className={sortField === 'amount' ? 'text-[#1B4332] dark:text-[#52B788]' : ''} />
                     </div>
                   </th>
@@ -260,8 +260,13 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ onOpenAddTra
                         {tx.date}
                       </td>
                       <td className="py-2.5 px-4">
-                        <div className="font-semibold text-[#141716] dark:text-[#F0F3F1]">
-                          {tx.merchant}
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-[#141716] dark:text-[#F0F3F1]">
+                            {tx.merchant}
+                          </span>
+                          {tx.paymentMethod === 'upi' && (
+                            <Badge variant="brand" size="sm">UPI</Badge>
+                          )}
                         </div>
                         <div className="text-[11px] text-[#58605C] dark:text-[#9BA6A0] truncate max-w-sm">
                           {tx.description}
@@ -288,7 +293,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ onOpenAddTra
                               : 'text-[#141716] dark:text-[#F0F3F1]'
                           }
                         >
-                          {isIncome ? '+' : isTransfer ? '' : '-'}${tx.amount.toFixed(2)}
+                          {isIncome ? '+' : isTransfer ? '' : '-'}{formatAmount(tx.amount)}
                         </span>
                       </td>
                       <td className="py-2.5 px-4 text-center">

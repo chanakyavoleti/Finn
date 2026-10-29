@@ -8,10 +8,10 @@ import { SpendingBreakdownChart } from '../components/charts/SpendingBreakdownCh
 import { TrendingUp, ShieldAlert, Award, ArrowUpRight } from 'lucide-react';
 
 export const AnalyticsView: React.FC = () => {
-  const { metrics } = useFinance();
+  const { metrics, formatAmount, primaryCurrency } = useFinance();
 
-  // Liquidity Runway: liquid cash divided by average monthly spend ($6,642)
-  const monthlyBurn = metrics.totalExpenses || 6642;
+  // Liquidity Runway: liquid cash divided by average monthly spend
+  const monthlyBurn = metrics.totalExpenses || 1;
   const liquidityRunwayMonths = (metrics.liquidCash / monthlyBurn).toFixed(1);
 
   return (
@@ -21,7 +21,7 @@ export const AnalyticsView: React.FC = () => {
         <MetricCard
           label="Savings Rate Ratio"
           value={`${metrics.savingsRatePct.toFixed(1)}%`}
-          trend={{ value: '+3.1% vs Sep', isPositive: true }}
+          trend={{ value: '+3.1% vs previous month', isPositive: true }}
           secondaryContext="Target benchmark: > 25.0%"
           accent="forest"
         />
@@ -29,17 +29,17 @@ export const AnalyticsView: React.FC = () => {
           label="Liquid Cash Runway"
           value={`${liquidityRunwayMonths} mos`}
           trend={{ value: 'Exceeds 6-mo goal', isPositive: true }}
-          secondaryContext={`$${metrics.liquidCash.toLocaleString()} in checking & HYSA`}
+          secondaryContext={`${formatAmount(metrics.liquidCash)} in savings & liquid funds`}
         />
         <MetricCard
           label="Fixed Cost Ratio"
           value="34.2%"
           trend={{ value: 'Healthy (<50%)', isPositive: true }}
-          secondaryContext="Rent ($2,150) + utilities vs net income"
+          secondaryContext="Baseline fixed overhead vs net monthly inflows"
         />
         <MetricCard
           label="Debt-to-Asset Ratio"
-          value={`${((metrics.totalDebt / (metrics.totalNetWorth + metrics.totalDebt)) * 100).toFixed(1)}%`}
+          value={`${((metrics.totalDebt / (metrics.totalNetWorth + metrics.totalDebt || 1)) * 100).toFixed(1)}%`}
           trend={{ value: 'Low leverage', isPositive: true }}
           secondaryContext="Total debt consists of rolling CC balances"
         />
@@ -90,35 +90,35 @@ export const AnalyticsView: React.FC = () => {
               </span>
             </div>
             <p className="text-[#58605C] dark:text-[#9BA6A0] leading-relaxed">
-              Rent remained invariant at $2,150.00. Utility expenditure contracted by 8.4% month-over-month due to reduced seasonal HVAC demand. Baseline fixed expenses accounted for $2,445.00 of total disbursements.
+              Rent and core utilities remained stable within budgeted allocations. Utility expenditure contracted by 8.4% month-over-month. Baseline fixed expenses accounted for {formatAmount(monthlyBurn * 0.35)} of total disbursements.
             </p>
           </div>
 
           <div className="p-3.5 rounded-lg border border-[#E8EAE6] dark:border-[#242D28] bg-[#FAFAF8] dark:bg-[#161B18]">
             <div className="flex items-center gap-2 mb-1">
               <span className="font-semibold text-[#141716] dark:text-[#F0F3F1]">
-                Discretionary Spike in Outdoor Apparel
+                Discretionary Spend Variance
               </span>
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#FEF2F2] text-[#991B1B] dark:bg-[#2B1313] dark:text-[#F87171] font-medium">
-                +$210.00 variance
+                Within threshold
               </span>
             </div>
             <p className="text-[#58605C] dark:text-[#9BA6A0] leading-relaxed">
-              Shopping expenditures rose 18% above typical 3-month trailing median, driven by a seasonal gear purchase at Patagonia ($210.00). However, grocery and cafe expenses dropped 11%, absorbing the difference without causing cash flow deficit.
+              Shopping expenditures tracked 12% above typical 3-month trailing median due to seasonal purchases. However, dining and grocery optimization offset the delta, absorbing the variance without causing cash flow deficit.
             </p>
           </div>
 
           <div className="p-3.5 rounded-lg border border-[#E8EAE6] dark:border-[#242D28] bg-[#FAFAF8] dark:bg-[#161B18]">
             <div className="flex items-center gap-2 mb-1">
               <span className="font-semibold text-[#141716] dark:text-[#F0F3F1]">
-                High-Yield Savings & Automated Compounding
+                Passive Yield & Automated Compounding
               </span>
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#EBF3EE] text-[#1B4332] dark:bg-[#1A2820] dark:text-[#52B788] font-medium">
-                +$35.20 yield
+                Accretive
               </span>
             </div>
             <p className="text-[#58605C] dark:text-[#9BA6A0] leading-relaxed">
-              Monthly passive interest earned across Marcus HYSA and Vanguard Federal Money Market reached $142.10 at current 4.40% APY benchmark, accelerating the timeline to reach the 6-month emergency reserve threshold.
+              Monthly passive interest earned across high-yield savings accounts and liquid debt funds continues to compound, accelerating the timeline to reach the 6-month emergency reserve threshold.
             </p>
           </div>
         </div>

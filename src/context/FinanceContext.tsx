@@ -8,6 +8,9 @@ import {
   INITIAL_HOLDINGS, INITIAL_SAVINGS_GOALS, INITIAL_SPLIT_EXPENSES, 
   CURRENCY_PAIRS, AI_INSIGHTS 
 } from '../data/mockData';
+import { CurrencyCode, formatMoney, addMoney, subtractMoney } from '../utils/currency';
+import { AuthService, UserProfile, UserSession } from '../auth/authService';
+import { parseBankStatementCsv, ParseResult } from '../integrations/statementParsers';
 
 export interface ToastMessage {
   id: string;
@@ -25,7 +28,15 @@ interface FinanceContextType {
   setActivePage: (page: NavPage) => void;
   selectedPeriod: DatePeriod;
   setSelectedPeriod: (period: DatePeriod) => void;
+  primaryCurrency: CurrencyCode;
+  setPrimaryCurrency: (code: CurrencyCode) => void;
   
+  // User Authentication
+  currentUser: UserProfile | null;
+  loginUser: (email: string, pass: string) => Promise<void>;
+  registerUser: (email: string, name: string, pass: string) => Promise<void>;
+  logoutUser: () => void;
+
   accounts: Account[];
   transactions: Transaction[];
   budgets: Budget[];
@@ -48,6 +59,7 @@ interface FinanceContextType {
   syncAccount: (id: string) => Promise<void>;
   syncAllAccounts: () => Promise<void>;
   addAccount: (account: Omit<Account, 'id' | 'lastSynced' | 'status'>) => void;
+  importStatementCsv: (csvContent: string, targetAccountId: string) => { imported: number; duplicates: number; errors: number };
 
   // Calculated Metrics (Answers to the 7 core questions)
   metrics: {
@@ -69,6 +81,7 @@ interface FinanceContextType {
   toasts: ToastMessage[];
   addToast: (title: string, type?: ToastMessage['type'], description?: string) => void;
   removeToast: (id: string) => void;
+  formatAmount: (amount: number, options?: { compact?: boolean }) => string;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -85,8 +98,28 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return saved !== null ? saved === 'true' : true;
   });
 
+  const [primaryCurrency, setPrimaryCurrency] = useState<CurrencyCode>('INR');
   const [activePage, setActivePage] = useState<NavPage>('dashboard');
   const [selectedPeriod, setSelectedPeriod] = useState<DatePeriod>('this_month');
+
+  // Authentication State
+  const [session, setSession] = useState<UserSession | null>(() => {
+    const s = AuthService.getSession();
+    if (s) return s;
+    // Default demo session
+    return {
+      token: 'demo_token',
+      user: {
+        id: 'usr_demo',
+        email: 'chanakya@finn.in',
+        fullName: 'Chanakya Voleti',
+        defaultCurrency: 'INR',
+        fiscalYearType: 'indian',
+        createdAt: new Date().toISOString(),
+      },
+      expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    };
+  });
 
   // Application Data
   const [accounts, setAccounts] = useState<Account[]>(() => isDemoMode ? INITIAL_ACCOUNTS : []);
@@ -109,7 +142,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     localStorage.setItem('finn_theme', theme);
   }, [theme]);
 
-  // Sync demo mode to localStorage and toggle data
   const toggleDemoMode = () => {
     const nextMode = !isDemoMode;
     setIsDemoMode(nextMode);
@@ -122,7 +154,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setGoals(INITIAL_SAVINGS_GOALS);
       setSplitExpenses(INITIAL_SPLIT_EXPENSES);
       setInsights(AI_INSIGHTS);
-      addToast('Demonstration Environment Enabled', 'info', 'Loaded verified demonstration dataset.');
+      addToast('Indian Demo Environment Active', 'info', 'Loaded verified INR records, UPI ledger, and Nifty holdings.');
     } else {
       setAccounts([]);
       setTransactions([]);
@@ -131,7 +163,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setGoals([]);
       setSplitExpenses([]);
       setInsights([]);
-      addToast('Live Environment Initialized', 'info', 'Clean workspace ready for your verified financial accounts.');
+      addToast('Live Environment Initialized', 'info', 'Clean slate ready for your verified accounts and bank statements.');
     }
   };
 
@@ -151,19 +183,52 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
-  // Transactions Management
+  const formatAmount = (amount: number, options?: { compact?: boolean }) => {
+    return formatMoney(amount, primaryCurrency, options);
+  };
+
+  // Auth Handlers
+  const loginUser = async (email: string, pass: string) => {
+    const userSession = await AuthService.login(email, pass);
+    setSession(userSession);
+    setPrimaryCurrency(userSession.user.defaultCurrency);
+    addToast('Welcome back', 'success', userSession.user.fullName);
+  };
+
+  const registerUser = async (email: string, name: string, pass: string) => {
+    const userSession = await AuthService.register(email, name, pass);
+    setSession(userSession);
+    setPrimaryCurrency('INR');
+    addToast('Account created successfully', 'success', `Welcome to FINN, ${name}`);
+  };
+
+  const logoutUser = () => {
+    AuthService.logout();
+    setSession(null);
+    addToast('Logged out', 'info', 'Your session has ended.');
+  };
+
+  // Double-Entry Transactions Management
   const addTransaction = (txData: Omit<Transaction, 'id'>) => {
     const newTx: Transaction = {
       ...txData,
-      id: 'tx-' + Date.now()
+      id: 'tx-' + Date.now(),
+      currency: txData.currency || primaryCurrency
     };
     setTransactions(prev => [newTx, ...prev]);
     
-    // Also update account balance
+    // Update account balances based on transaction type
     setAccounts(prev => prev.map(acc => {
       if (acc.id === txData.accountId) {
-        const change = txData.type === 'income' ? txData.amount : -txData.amount;
-        return { ...acc, balance: acc.balance + change };
+        if (txData.type === 'income' || txData.type === 'refund') {
+          return { ...acc, balance: addMoney(acc.balance, txData.amount) };
+        } else if (txData.type === 'expense' || txData.type === 'transfer' || txData.type === 'investment_contribution') {
+          return { ...acc, balance: subtractMoney(acc.balance, txData.amount) };
+        }
+      }
+      // If internal transfer, credit the destination account
+      if (txData.type === 'transfer' && acc.id === txData.destinationAccountId) {
+        return { ...acc, balance: addMoney(acc.balance, txData.amount) };
       }
       return acc;
     }));
@@ -173,13 +238,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setBudgets(prev => prev.map(b => {
         if (b.categoryName.toLowerCase().includes(txData.category.toLowerCase()) || 
             txData.category.toLowerCase().includes(b.categoryName.toLowerCase())) {
-          return { ...b, spent: b.spent + txData.amount };
+          return { ...b, spent: addMoney(b.spent, txData.amount) };
         }
         return b;
       }));
     }
 
-    addToast('Transaction recorded', 'success', `${txData.merchant} — $${txData.amount.toFixed(2)}`);
+    addToast('Transaction recorded', 'success', `${txData.merchant} — ${formatAmount(txData.amount)}`);
   };
 
   const deleteTransaction = (id: string) => {
@@ -187,6 +252,66 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!tx) return;
     setTransactions(prev => prev.filter(t => t.id !== id));
     addToast('Transaction removed', 'info', tx.merchant);
+  };
+
+  // CSV Bank Statement Import with Duplicate Detection
+  const importStatementCsv = (csvContent: string, targetAccountId: string) => {
+    const parsed: ParseResult = parseBankStatementCsv(csvContent);
+    const targetAccount = accounts.find(a => a.id === targetAccountId);
+    const accountName = targetAccount ? targetAccount.name : 'Target Account';
+
+    let importedCount = 0;
+    let duplicateCount = 0;
+
+    const newTransactions: Transaction[] = [];
+
+    parsed.rows.forEach((row, idx) => {
+      // Duplicate detection check: same date, same amount, and same merchant/narrative
+      const isDuplicate = transactions.some(existing => 
+        existing.accountId === targetAccountId &&
+        existing.date === row.date &&
+        Math.abs(existing.amount - row.amount) < 0.01 &&
+        (existing.merchant.toLowerCase().includes(row.merchant.toLowerCase()) ||
+         row.merchant.toLowerCase().includes(existing.merchant.toLowerCase()))
+      );
+
+      if (isDuplicate) {
+        duplicateCount++;
+      } else {
+        newTransactions.push({
+          id: `imp-${Date.now()}-${idx}`,
+          accountId: targetAccountId,
+          accountName,
+          date: row.date,
+          amount: row.amount,
+          type: row.type,
+          category: row.type === 'income' ? 'Salary' : 'General Bank Disbursement',
+          merchant: row.merchant,
+          description: row.description,
+          status: 'posted',
+          paymentMethod: row.paymentMethod,
+          utrNumber: row.referenceNumber,
+          tags: ['StatementImport', parsed.bankName]
+        });
+        importedCount++;
+      }
+    });
+
+    if (newTransactions.length > 0) {
+      setTransactions(prev => [...newTransactions, ...prev]);
+    }
+
+    addToast(
+      'Statement Import Completed',
+      'success',
+      `Imported ${importedCount} transactions. Skipped ${duplicateCount} duplicates.`
+    );
+
+    return {
+      imported: importedCount,
+      duplicates: duplicateCount,
+      errors: parsed.errorCount
+    };
   };
 
   // Budgets Management
@@ -197,12 +322,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       spent: 0
     };
     setBudgets(prev => [...prev, newBudget]);
-    addToast('Budget established', 'success', `${budgetData.categoryName}: $${budgetData.limit}/mo`);
+    addToast('Budget established', 'success', `${budgetData.categoryName}: ${formatAmount(budgetData.limit)}/mo`);
   };
 
   const updateBudgetLimit = (id: string, limit: number) => {
     setBudgets(prev => prev.map(b => b.id === id ? { ...b, limit } : b));
-    addToast('Budget updated', 'success', `New target limit: $${limit}`);
+    addToast('Budget updated', 'success', `New target limit: ${formatAmount(limit)}`);
   };
 
   // Goals Management
@@ -213,17 +338,17 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       currentAmount: 0
     };
     setGoals(prev => [...prev, newGoal]);
-    addToast('Savings goal created', 'success', goalData.name);
+    addToast('Savings milestone defined', 'success', goalData.name);
   };
 
   const contributeToGoal = (id: string, amount: number) => {
     setGoals(prev => prev.map(g => {
       if (g.id === id) {
-        return { ...g, currentAmount: g.currentAmount + amount };
+        return { ...g, currentAmount: addMoney(g.currentAmount, amount) };
       }
       return g;
     }));
-    addToast('Contribution recorded', 'success', `+$${amount.toLocaleString()} added to savings target.`);
+    addToast('Contribution recorded', 'success', `+${formatAmount(amount)} added to savings milestone.`);
   };
 
   // Split Expenses Management
@@ -233,7 +358,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       id: 'se-' + Date.now()
     };
     setSplitExpenses(prev => [newExpense, ...prev]);
-    addToast('Shared expense logged', 'success', `${expenseData.title} ($${expenseData.totalAmount.toFixed(2)})`);
+    addToast('Shared expense logged', 'success', `${expenseData.title} (${formatAmount(expenseData.totalAmount)})`);
   };
 
   const settleParticipant = (expenseId: string, participantName: string) => {
@@ -262,16 +387,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       lastUpdated: new Date().toISOString()
     };
     setHoldings(prev => [...prev, newHolding]);
-    addToast('Asset holding added', 'success', `${holdingData.symbol} (${holdingData.shares} shares)`);
+    addToast('Holding added', 'success', `${holdingData.symbol} (${holdingData.shares} units)`);
   };
 
   // Accounts Management & Real Sync Simulation
   const syncAccount = async (id: string) => {
     setAccounts(prev => prev.map(a => a.id === id ? { ...a, status: 'syncing' } : a));
-    
-    // Simulate real bank connection roundtrip with realistic latency
     await new Promise(resolve => setTimeout(resolve, 1400));
-    
     setAccounts(prev => prev.map(a => {
       if (a.id === id) {
         return {
@@ -283,7 +405,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
       return a;
     }));
-    addToast('Synchronization verified', 'success', 'Bank connection refreshed with latest ledger.');
+    addToast('Bank account synced', 'success', 'Direct balance reconciliation verified.');
   };
 
   const syncAllAccounts = async () => {
@@ -295,7 +417,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       lastSynced: new Date().toISOString(),
       errorMessage: undefined
     })));
-    addToast('All institutions synced', 'success', 'All financial connections are active and validated.');
+    addToast('All financial links verified', 'success', 'All bank accounts and demat channels reconciled.');
   };
 
   const addAccount = (accountData: Omit<Account, 'id' | 'lastSynced' | 'status'>) => {
@@ -306,48 +428,52 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       status: 'synced'
     };
     setAccounts(prev => [...prev, newAcc]);
-    addToast('Account linked successfully', 'success', `${accountData.institution} — ${accountData.name}`);
+    addToast('Account registered', 'success', `${accountData.institution} — ${accountData.name}`);
   };
 
-  // Calculated Core Metrics
+  // Authoritative Core Financial Metrics (Excludes transfers & non-consumption transactions)
   const metrics = useMemo(() => {
     let liquidCash = 0;
     let totalInvested = 0;
     let totalDebt = 0;
 
     accounts.forEach(a => {
-      if (a.type === 'checking' || a.type === 'savings') {
-        liquidCash += a.balance;
+      if (a.type === 'checking' || a.type === 'savings' || a.type === 'cash') {
+        liquidCash = addMoney(liquidCash, a.balance);
       } else if (a.type === 'investment' || a.type === 'crypto') {
-        totalInvested += a.balance;
+        totalInvested = addMoney(totalInvested, a.balance);
       } else if (a.type === 'credit') {
-        // balance is negative or represents liability
-        totalDebt += Math.abs(a.balance);
+        totalDebt = addMoney(totalDebt, Math.abs(a.balance));
       }
     });
 
-    const totalNetWorth = liquidCash + totalInvested - totalDebt;
+    const totalNetWorth = subtractMoney(addMoney(liquidCash, totalInvested), totalDebt);
 
-    // Filter transactions based on active period (default to current month)
+    // Eligible Income: strictly type === 'income'
     const incomeTransactions = transactions.filter(t => t.type === 'income');
+    // Eligible Expenses: strictly type === 'expense'
     const expenseTransactions = transactions.filter(t => t.type === 'expense');
+    // Refunds: reduce total expense
+    const refundTransactions = transactions.filter(t => t.type === 'refund');
 
-    const totalIncome = incomeTransactions.reduce((acc, t) => acc + t.amount, 0);
-    const totalExpenses = expenseTransactions.reduce((acc, t) => acc + t.amount, 0);
-    const netSavings = totalIncome - totalExpenses;
+    const totalIncome = incomeTransactions.reduce((acc, t) => addMoney(acc, t.amount), 0);
+    const grossExpenses = expenseTransactions.reduce((acc, t) => addMoney(acc, t.amount), 0);
+    const totalRefunds = refundTransactions.reduce((acc, t) => addMoney(acc, t.amount), 0);
+    const totalExpenses = Math.max(subtractMoney(grossExpenses, totalRefunds), 0);
+
+    const netSavings = subtractMoney(totalIncome, totalExpenses);
     const savingsRatePct = totalIncome > 0 ? (netSavings / totalIncome) * 100 : 0;
 
-    const totalBudgetLimit = budgets.reduce((acc, b) => acc + b.limit, 0);
-    const totalBudgetSpent = budgets.reduce((acc, b) => acc + b.spent, 0);
+    const totalBudgetLimit = budgets.reduce((acc, b) => addMoney(acc, b.limit), 0);
+    const totalBudgetSpent = budgets.reduce((acc, b) => addMoney(acc, b.spent), 0);
     const budgetStatusPct = totalBudgetLimit > 0 ? (totalBudgetSpent / totalBudgetLimit) * 100 : 0;
 
-    // Splits where user paid and others haven't settled yet
     let unsettledSplitsOwedToYou = 0;
     splitExpenses.forEach(exp => {
       if (exp.paidBy.toLowerCase() === 'you' || exp.paidBy.toLowerCase() === 'me') {
         exp.participants.forEach(p => {
           if (!p.hasPaid && p.name.toLowerCase() !== 'you') {
-            unsettledSplitsOwedToYou += p.share;
+            unsettledSplitsOwedToYou = addMoney(unsettledSplitsOwedToYou, p.share);
           }
         });
       }
@@ -380,6 +506,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setActivePage,
         selectedPeriod,
         setSelectedPeriod,
+        primaryCurrency,
+        setPrimaryCurrency,
+        currentUser: session ? session.user : null,
+        loginUser,
+        registerUser,
+        logoutUser,
         accounts,
         transactions,
         budgets,
@@ -400,10 +532,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         syncAccount,
         syncAllAccounts,
         addAccount,
+        importStatementCsv,
         metrics,
         toasts,
         addToast,
-        removeToast
+        removeToast,
+        formatAmount
       }}
     >
       {children}

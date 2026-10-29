@@ -1,4 +1,4 @@
-export type AccountType = 'checking' | 'savings' | 'credit' | 'investment' | 'crypto';
+export type AccountType = 'checking' | 'savings' | 'cash' | 'credit' | 'investment' | 'crypto';
 export type SyncStatus = 'synced' | 'syncing' | 'error' | 'disconnected';
 
 export interface Account {
@@ -15,21 +15,29 @@ export interface Account {
   errorMessage?: string;
 }
 
-export type TransactionType = 'income' | 'expense' | 'transfer';
-export type TransactionStatus = 'posted' | 'pending';
+export type TransactionType = 'income' | 'expense' | 'transfer' | 'refund' | 'investment_contribution' | 'investment_withdrawal';
+export type TransactionStatus = 'posted' | 'pending' | 'reconciled';
+export type PaymentMethod = 'upi' | 'cash' | 'debit_card' | 'credit_card' | 'net_banking' | 'bank_transfer' | 'wallet' | 'other';
 
 export interface Transaction {
   id: string;
   accountId: string;
   accountName?: string;
+  destinationAccountId?: string;
+  originalTransactionId?: string; // For refunds
   date: string;
-  amount: number; // positive for income, positive absolute for expenses with type='expense'
+  amount: number;
+  currency?: string;
   type: TransactionType;
   category: string;
   merchant: string;
   description: string;
   status: TransactionStatus;
+  paymentMethod?: PaymentMethod;
+  upiId?: string;
+  utrNumber?: string;
   tags?: string[];
+  receiptUrl?: string;
 }
 
 export interface Budget {
@@ -119,6 +127,7 @@ export type NavPage =
   | 'analytics' 
   | 'investments' 
   | 'goals' 
+  | 'fire'
   | 'bills' 
   | 'currency' 
   | 'advisor' 

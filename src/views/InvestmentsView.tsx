@@ -17,7 +17,7 @@ import {
 import { AssetClass, Holding } from '../types';
 
 export const InvestmentsView: React.FC = () => {
-  const { holdings, addHolding } = useFinance();
+  const { holdings, addHolding, formatAmount, primaryCurrency } = useFinance();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [symbol, setSymbol] = useState('');
@@ -32,6 +32,12 @@ export const InvestmentsView: React.FC = () => {
   const totalCostBasis = holdings.reduce((sum, h) => sum + h.shares * h.avgCost, 0);
   const totalGainLoss = totalValue - totalCostBasis;
   const totalGainLossPct = totalCostBasis > 0 ? (totalGainLoss / totalCostBasis) * 100 : 0;
+
+  // Indian tax assessment estimation (Finance Act 2024)
+  // Equity LTCG: 12.5% above ₹1.25L exemption. STCG: 20%.
+  const estimatedTaxExemption = 125000;
+  const taxableLTCG = Math.max(0, totalGainLoss - estimatedTaxExemption);
+  const estimatedLTCGTax = taxableLTCG * 0.125;
 
   // Asset class breakdown
   const assetClassTotals = holdings.reduce((acc, h) => {
@@ -84,28 +90,29 @@ export const InvestmentsView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           label="Total Portfolio Value"
-          value={`$${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-          subValue="USD"
-          trend={{ value: '+$1,120.40 today (+0.6%)', isPositive: true }}
-          secondaryContext="Priced via NYSE & Nasdaq live feeds"
+          value={formatAmount(totalValue)}
+          subValue={primaryCurrency}
+          trend={{ value: '+0.8% today', isPositive: true }}
+          secondaryContext="Consolidated demat, cold storage & MF holdings"
           accent="forest"
         />
         <MetricCard
           label="Unrealized Total Return"
-          value={`+$${totalGainLoss.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-          trend={{ value: `+${totalGainLossPct.toFixed(1)}% all-time`, isPositive: true }}
-          secondaryContext={`Cost basis: $${totalCostBasis.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
+          value={`${totalGainLoss >= 0 ? '+' : ''}${formatAmount(totalGainLoss)}`}
+          trend={{ value: `${totalGainLossPct >= 0 ? '+' : ''}${totalGainLossPct.toFixed(1)}% all-time`, isPositive: totalGainLoss >= 0 }}
+          secondaryContext={`Cost basis: ${formatAmount(totalCostBasis)}`}
         />
         <MetricCard
-          label="Number of Asset Holdings"
-          value={`${holdings.length} Positions`}
-          secondaryContext="Indexed ETFs, Core Bluechips & Reserve"
+          label="Estimated Taxable LTCG"
+          value={formatAmount(estimatedLTCGTax)}
+          trend={{ value: 'Finance Act 2024 (12.5%)', isPositive: true }}
+          secondaryContext={`₹1.25L annual exemption applied`}
         />
         <MetricCard
-          label="Valuation Timestamp"
-          value="Oct 29, 2026"
-          subValue="14:30 EDT"
-          secondaryContext="Consolidated market session close"
+          label="Number of Positions"
+          value={`${holdings.length} Assets`}
+          subValue={primaryCurrency}
+          secondaryContext="NSE/BSE equities, index funds, bonds, crypto"
         />
       </div>
 
@@ -141,7 +148,7 @@ export const InvestmentsView: React.FC = () => {
                   <span className="w-2.5 h-2.5 rounded-xs" style={{ backgroundColor: meta.color }} />
                   <span className="text-[#58605C] dark:text-[#9BA6A0]">{meta.label}:</span>
                   <span className="font-semibold text-[#141716] dark:text-[#F0F3F1]">{pct.toFixed(1)}%</span>
-                  <span className="text-[11px] text-[#8A928E] dark:text-[#6B7771]">(${val.toLocaleString('en-US', { maximumFractionDigits: 0 })})</span>
+                  <span className="text-[11px] text-[#8A928E] dark:text-[#6B7771]">({formatAmount(val)})</span>
                 </div>
               );
             })}
@@ -217,22 +224,22 @@ export const InvestmentsView: React.FC = () => {
                         {h.shares.toLocaleString()}
                       </td>
                       <td className="py-2.5 px-4 text-right tabular-nums text-[#58605C] dark:text-[#9BA6A0]">
-                        ${h.avgCost.toFixed(2)}
+                        {formatAmount(h.avgCost)}
                       </td>
                       <td className="py-2.5 px-4 text-right tabular-nums font-medium text-[#141716] dark:text-[#F0F3F1]">
                         <div className="flex items-center justify-end gap-1">
-                          <span>${h.currentPrice.toFixed(2)}</span>
+                          <span>{formatAmount(h.currentPrice)}</span>
                           <span className={`text-[10px] ${h.dayChangePct >= 0 ? 'text-[#166534] dark:text-[#4ADE80]' : 'text-[#991B1B] dark:text-[#F87171]'}`}>
                             {h.dayChangePct >= 0 ? '+' : ''}{h.dayChangePct}%
                           </span>
                         </div>
                       </td>
                       <td className="py-2.5 px-4 text-right tabular-nums font-semibold text-[#141716] dark:text-[#F0F3F1]">
-                        ${positionValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {formatAmount(positionValue)}
                       </td>
                       <td className="py-2.5 px-4 text-right tabular-nums font-semibold">
                         <span className={isPositive ? 'text-[#166534] dark:text-[#4ADE80]' : 'text-[#991B1B] dark:text-[#F87171]'}>
-                          {isPositive ? '+' : '-'}${Math.abs(gainLoss).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {isPositive ? '+' : '-'}{formatAmount(Math.abs(gainLoss))}
                           <span className="text-[11px] font-normal ml-1">
                             ({isPositive ? '+' : ''}{gainLossPct.toFixed(1)}%)
                           </span>

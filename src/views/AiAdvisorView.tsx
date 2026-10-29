@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 export const AiAdvisorView: React.FC = () => {
-  const { insights, metrics, transactions, budgets, goals } = useFinance();
+  const { insights, metrics, transactions, budgets, goals, formatAmount, primaryCurrency } = useFinance();
 
   const [customQuestion, setCustomQuestion] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
@@ -28,10 +28,10 @@ export const AiAdvisorView: React.FC = () => {
   } | null>(null);
 
   const sampleQueries = [
-    'Can I afford a one-time $1,200 discretionary purchase this month?',
-    'How does my grocery spend compare against 3-month trailing median?',
+    `Can I afford a discretionary ${formatAmount(25000)} purchase this month?`,
+    'How does my grocery spend compare against trailing average?',
     'What would happen to my emergency buffer if income stopped for 4 months?',
-    'How can I re-allocate dining surplus toward my Home Down Payment goal?'
+    'How can I re-allocate dining surplus toward my Long-Term Savings goal?'
   ];
 
   const handleRunQuery = (query: string) => {
@@ -41,48 +41,49 @@ export const AiAdvisorView: React.FC = () => {
     setTimeout(() => {
       setAnalyzing(false);
 
-      if (query.includes('1,200')) {
+      if (query.includes('25,000') || query.includes('purchase')) {
+        const testDisbursement = 25000;
         const remainingHeadroom = metrics.totalBudgetLimit - metrics.totalBudgetSpent;
-        const canAfford = metrics.netSavings >= 1200;
+        const canAfford = metrics.netSavings >= testDisbursement;
         setDynamicAnswer({
           query,
           answer: canAfford
-            ? `Yes. With a current net monthly surplus of $${metrics.netSavings.toLocaleString('en-US', { minimumFractionDigits: 2 })}, a $1,200.00 disbursement would reduce this month's savings to $${(metrics.netSavings - 1200).toLocaleString('en-US', { minimumFractionDigits: 2 })}, but maintain positive cash flow and preserve your emergency reserve untouched.`
-            : `Caution: Your current net monthly savings is $${metrics.netSavings.toFixed(2)}. Absorbing $1,200.00 would incur a deficit unless funded from existing cash reserves.`,
+            ? `Yes. With a current net monthly surplus of ${formatAmount(metrics.netSavings)}, a ${formatAmount(testDisbursement)} disbursement would reduce this month's savings to ${formatAmount(metrics.netSavings - testDisbursement)}, while maintaining positive net cash flow and preserving your liquid emergency buffer.`
+            : `Caution: Your current net monthly savings is ${formatAmount(metrics.netSavings)}. Absorbing ${formatAmount(testDisbursement)} would exceed this month's surplus and require drawing down liquid cash reserves.`,
           supportingFigures: [
-            { label: 'Current Net Savings', value: `$${metrics.netSavings.toLocaleString()}` },
-            { label: 'Unallocated Budget Headroom', value: `$${Math.max(0, remainingHeadroom).toLocaleString()}` },
-            { label: 'Liquid Checking Balance', value: `$${metrics.liquidCash.toLocaleString()}` },
-            { label: 'Post-Purchase Savings Rate', value: `${(((metrics.netSavings - 1200) / (metrics.totalIncome || 1)) * 100).toFixed(1)}%` },
+            { label: 'Current Net Savings', value: formatAmount(metrics.netSavings) },
+            { label: 'Unallocated Budget Headroom', value: formatAmount(Math.max(0, remainingHeadroom)) },
+            { label: 'Liquid Savings Balance', value: formatAmount(metrics.liquidCash) },
+            { label: 'Post-Purchase Savings Rate', value: `${(((metrics.netSavings - testDisbursement) / (metrics.totalIncome || 1)) * 100).toFixed(1)}%` },
           ]
         });
       } else if (query.includes('grocery')) {
         setDynamicAnswer({
           query,
-          answer: 'Your current October grocery expenditure is $652.00 across Whole Foods Market and Trader Joe\'s. This is tracking within 2.3% of your 3-month trailing average ($638.00), demonstrating consistent disciplined purchasing with zero inflationary anomalies.',
+          answer: `Your grocery expenditure is disciplined and tracking within 3.4% of your trailing monthly average, demonstrating consistent budgeting with zero inflationary spikes.`,
           supportingFigures: [
-            { label: 'October Groceries', value: '$652.00' },
-            { label: '3-Month Average', value: '$638.00' },
-            { label: 'Budget Limit', value: '$650.00' },
-            { label: 'Variance to Limit', value: '+$2.00 (99.7% cap)' },
+            { label: 'Monthly Groceries', value: formatAmount(8500) },
+            { label: '3-Month Average', value: formatAmount(8200) },
+            { label: 'Budget Limit', value: formatAmount(10000) },
+            { label: 'Variance to Limit', value: `Disciplined (${formatAmount(1500)} headroom)` },
           ]
         });
       } else {
-        const monthlyBurn = metrics.totalExpenses || 6642;
+        const monthlyBurn = metrics.totalExpenses || 45000;
         const fourMonthBurn = monthlyBurn * 4;
         const remainingCash = metrics.liquidCash - fourMonthBurn;
         setDynamicAnswer({
           query,
-          answer: `Stress Test: 4 months of zero income would require $${fourMonthBurn.toLocaleString()} in liquid disbursements. Because your liquid cash in checking & Marcus HYSA is $${metrics.liquidCash.toLocaleString()}, you would successfully absorb this period with $${Math.max(0, remainingCash).toLocaleString()} remaining in cash reserves without liquidating any Vanguard investments.`,
+          answer: `Stress Test: 4 months of zero income would require ${formatAmount(fourMonthBurn)} in liquid disbursements. Because your liquid cash across bank accounts is ${formatAmount(metrics.liquidCash)}, you would ${remainingCash >= 0 ? 'comfortably absorb' : 'partially absorb'} this period with ${formatAmount(Math.max(0, remainingCash))} remaining in reserves without liquidating core investments.`,
           supportingFigures: [
-            { label: '4-Month Living Expenses', value: `$${fourMonthBurn.toLocaleString()}` },
-            { label: 'Current Liquid Reserves', value: `$${metrics.liquidCash.toLocaleString()}` },
-            { label: 'Remaining Cash Buffer', value: `$${Math.max(0, remainingCash).toLocaleString()}` },
-            { label: 'Investment Portfolio Preserved', value: `$${metrics.totalInvested.toLocaleString()}` },
+            { label: '4-Month Living Expenses', value: formatAmount(fourMonthBurn) },
+            { label: 'Current Liquid Reserves', value: formatAmount(metrics.liquidCash) },
+            { label: 'Remaining Cash Buffer', value: formatAmount(Math.max(0, remainingCash)) },
+            { label: 'Portfolio Protected', value: '100% Intact' },
           ]
         });
       }
-    }, 700);
+    }, 400);
   };
 
   return (

@@ -12,6 +12,7 @@ import {
   ArrowLeftRight,
   Sparkles,
   Landmark,
+  Flame,
   Sun,
   Moon,
   Database,
@@ -70,6 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       items: [
         { id: 'investments', label: 'Investments', icon: TrendingUp },
         { id: 'goals', label: 'Savings Goals', icon: Target },
+        { id: 'fire', label: 'Financial Freedom (FIRE)', icon: Flame },
       ]
     },
     {

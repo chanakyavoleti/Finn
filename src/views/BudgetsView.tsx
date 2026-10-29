@@ -17,7 +17,7 @@ import {
 import { Budget } from '../types';
 
 export const BudgetsView: React.FC = () => {
-  const { budgets, metrics, addBudget, updateBudgetLimit } = useFinance();
+  const { budgets, metrics, addBudget, updateBudgetLimit, formatAmount, primaryCurrency } = useFinance();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
@@ -64,14 +64,14 @@ export const BudgetsView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           label="Total Planned Allocation"
-          value={`$${metrics.totalBudgetLimit.toLocaleString()}`}
+          value={formatAmount(metrics.totalBudgetLimit)}
           subValue="/ month"
-          secondaryContext="Sum of 7 monitored spending categories"
+          secondaryContext="Sum of monitored spending categories"
           accent="forest"
         />
         <MetricCard
           label="Actual Month-to-Date Spend"
-          value={`$${metrics.totalBudgetSpent.toLocaleString()}`}
+          value={formatAmount(metrics.totalBudgetSpent)}
           trend={{ 
             value: `${metrics.budgetStatusPct.toFixed(1)}% of limit`, 
             isPositive: metrics.budgetStatusPct <= 100 
@@ -80,7 +80,7 @@ export const BudgetsView: React.FC = () => {
         />
         <MetricCard
           label="Net Remaining Headroom"
-          value={`$${Math.max(0, totalRemaining).toLocaleString()}`}
+          value={formatAmount(Math.max(0, totalRemaining))}
           trend={{
             value: totalRemaining >= 0 ? 'Within budget' : 'Deficit',
             isPositive: totalRemaining >= 0,
@@ -97,7 +97,7 @@ export const BudgetsView: React.FC = () => {
             isPositive: !budgets.some(b => b.spent > b.limit),
             isNeutral: false
           }}
-          secondaryContext="Overrun: Shopping & Discretionary"
+          secondaryContext="Overrun: Shopping & Apparel"
         />
       </div>
 
@@ -151,10 +151,10 @@ export const BudgetsView: React.FC = () => {
                     <p className="text-xs text-[#58605C] dark:text-[#9BA6A0] mt-0.5 tabular-nums">
                       {isOver ? (
                         <span className="text-[#991B1B] dark:text-[#F87171] font-medium">
-                          ${Math.abs(remaining).toLocaleString()} over monthly cap
+                          {formatAmount(Math.abs(remaining))} over monthly cap
                         </span>
                       ) : (
-                        <span>${remaining.toLocaleString()} remaining to spend</span>
+                        <span>{formatAmount(remaining)} remaining to spend</span>
                       )}
                     </p>
                   </div>
@@ -201,10 +201,10 @@ export const BudgetsView: React.FC = () => {
                 {/* Figures Breakdown */}
                 <div className="flex items-center justify-between text-xs tabular-nums pt-1 border-t border-[#E8EAE6] dark:border-[#242D28]">
                   <span className="text-[#58605C] dark:text-[#9BA6A0]">
-                    Spent: <span className="font-semibold text-[#141716] dark:text-[#F0F3F1]">${b.spent.toLocaleString()}</span>
+                    Spent: <span className="font-semibold text-[#141716] dark:text-[#F0F3F1]">{formatAmount(b.spent)}</span>
                   </span>
                   <span className="text-[#58605C] dark:text-[#9BA6A0]">
-                    Cap: <span className="font-semibold text-[#141716] dark:text-[#F0F3F1]">${b.limit.toLocaleString()}</span>
+                    Cap: <span className="font-semibold text-[#141716] dark:text-[#F0F3F1]">{formatAmount(b.limit)}</span>
                   </span>
                   <span className="font-medium text-[#141716] dark:text-[#F0F3F1]">
                     {pct.toFixed(1)}%

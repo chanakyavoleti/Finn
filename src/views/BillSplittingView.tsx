@@ -12,13 +12,13 @@ import {
   Check, 
   Clock, 
   ArrowRight, 
-  DollarSign,
   UserCheck
 } from 'lucide-react';
 import { SplitExpense } from '../types';
+import { calculateEqualSplit } from '../utils/splitCalculator';
 
 export const BillSplittingView: React.FC = () => {
-  const { splitExpenses, addSplitExpense, settleParticipant } = useFinance();
+  const { splitExpenses, addSplitExpense, settleParticipant, formatAmount, primaryCurrency } = useFinance();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [title, setTitle] = useState('');
@@ -56,11 +56,12 @@ export const BillSplittingView: React.FC = () => {
 
     if (names.length === 0) return;
 
-    const sharePerPerson = amount / names.length;
-    const participants = names.map(name => ({
-      name,
-      share: sharePerPerson,
-      hasPaid: name.toLowerCase() === 'you' || name.toLowerCase() === 'me'
+    // Use authoritative split calculation with exact paise rounding
+    const splits = calculateEqualSplit(amount, names);
+    const participants = splits.map(s => ({
+      name: s.participantName,
+      share: s.share,
+      hasPaid: s.participantName.toLowerCase() === 'you' || s.participantName.toLowerCase() === 'me'
     }));
 
     addSplitExpense({
@@ -85,21 +86,21 @@ export const BillSplittingView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           label="Total Owed to You"
-          value={`$${totalOwedToYou.toFixed(2)}`}
+          value={formatAmount(totalOwedToYou)}
           trend={{ value: `${splitExpenses.filter(e => e.status === 'unsettled').length} open items`, isPositive: true }}
           secondaryContext="Unsettled balances from group disbursements"
           accent="forest"
         />
         <MetricCard
           label="Total You Owe"
-          value={`$${totalYouOwe.toFixed(2)}`}
+          value={formatAmount(totalYouOwe)}
           trend={{ value: totalYouOwe === 0 ? 'Fully settled' : 'Payment due', isPositive: totalYouOwe === 0 }}
           secondaryContext="Your outstanding balance on shared events"
         />
         <MetricCard
           label="Shared Events Recorded"
           value={`${splitExpenses.length} Shared Bills`}
-          secondaryContext="Cabin rentals, dinners, utilities"
+          secondaryContext="Trip stays, team meals, utilities"
         />
         <MetricCard
           label="Settlement Ratio"
@@ -167,7 +168,7 @@ export const BillSplittingView: React.FC = () => {
                   <div className="text-right tabular-nums">
                     <span className="text-xs text-[#8A928E] dark:text-[#6B7771]">Total Bill:</span>{' '}
                     <span className="text-base font-bold text-[#141716] dark:text-[#F0F3F1]">
-                      ${exp.totalAmount.toFixed(2)}
+                      {formatAmount(exp.totalAmount)}
                     </span>
                   </div>
                 </div>
@@ -194,7 +195,7 @@ export const BillSplittingView: React.FC = () => {
                               {p.name} {isSelf && '(You)'}
                             </div>
                             <div className="text-[11px] text-[#58605C] dark:text-[#9BA6A0] tabular-nums mt-0.5">
-                              Share: ${p.share.toFixed(2)}
+                              Share: {formatAmount(p.share)}
                             </div>
                           </div>
 
@@ -250,7 +251,7 @@ export const BillSplittingView: React.FC = () => {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block font-medium text-[#58605C] dark:text-[#9BA6A0] mb-1">
-                Total Amount (USD)
+                Total Amount ({primaryCurrency})
               </label>
               <input
                 type="number"

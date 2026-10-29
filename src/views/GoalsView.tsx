@@ -18,7 +18,7 @@ import {
 import { SavingsGoal } from '../types';
 
 export const GoalsView: React.FC = () => {
-  const { goals, addGoal, contributeToGoal } = useFinance();
+  const { goals, addGoal, contributeToGoal, formatAmount, primaryCurrency } = useFinance();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [contributeGoalId, setContributeGoalId] = useState<string | null>(null);
@@ -75,28 +75,28 @@ export const GoalsView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           label="Cumulative Goals Target"
-          value={`$${totalTarget.toLocaleString()}`}
-          subValue="USD"
+          value={formatAmount(totalTarget)}
+          subValue={primaryCurrency}
           secondaryContext={`${goals.length} defined capital milestones`}
           accent="forest"
         />
         <MetricCard
           label="Total Capital Saved"
-          value={`$${totalCurrent.toLocaleString()}`}
+          value={formatAmount(totalCurrent)}
           trend={{ value: `${overallProgress.toFixed(1)}% achieved`, isPositive: true }}
-          secondaryContext={`$${(totalTarget - totalCurrent).toLocaleString()} remaining to complete`}
+          secondaryContext={`${formatAmount(Math.max(0, totalTarget - totalCurrent))} remaining to complete`}
         />
         <MetricCard
           label="Planned Monthly Inflow"
-          value={`$${goals.reduce((sum, g) => sum + g.monthlyContribution, 0).toLocaleString()}`}
+          value={formatAmount(goals.reduce((sum, g) => sum + g.monthlyContribution, 0))}
           subValue="/ month"
-          secondaryContext="Automated transfers to high-yield reserves"
+          secondaryContext="Automated transfers to emergency & investment reserves"
         />
         <MetricCard
           label="Nearest Horizon"
           value="Dec 31, 2026"
           trend={{ value: '62 days remaining', isNeutral: true }}
-          secondaryContext="Emergency Reserve milestone (88.3%)"
+          secondaryContext="Emergency Reserve milestone (91.6%)"
         />
       </div>
 
@@ -171,15 +171,15 @@ export const GoalsView: React.FC = () => {
                   <div className="space-y-1.5 text-xs tabular-nums pb-3 border-b border-[#E8EAE6] dark:border-[#242D28]">
                     <div className="flex justify-between">
                       <span className="text-[#58605C] dark:text-[#9BA6A0]">Current Capital:</span>
-                      <span className="font-semibold text-[#141716] dark:text-[#F0F3F1]">${goal.currentAmount.toLocaleString()}</span>
+                      <span className="font-semibold text-[#141716] dark:text-[#F0F3F1]">{formatAmount(goal.currentAmount)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-[#58605C] dark:text-[#9BA6A0]">Target Milestone:</span>
-                      <span className="text-[#58605C] dark:text-[#9BA6A0]">${goal.targetAmount.toLocaleString()}</span>
+                      <span className="text-[#58605C] dark:text-[#9BA6A0]">{formatAmount(goal.targetAmount)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-[#58605C] dark:text-[#9BA6A0]">Remaining Needed:</span>
-                      <span className="font-medium text-[#1B4332] dark:text-[#52B788]">${remaining.toLocaleString()}</span>
+                      <span className="font-medium text-[#1B4332] dark:text-[#52B788]">{formatAmount(remaining)}</span>
                     </div>
                   </div>
                 </div>
@@ -190,7 +190,7 @@ export const GoalsView: React.FC = () => {
                     <div>Target: {goal.targetDate}</div>
                     {monthsLeft !== null && (
                       <div className="text-[#166534] dark:text-[#4ADE80] font-medium">
-                        ~{monthsLeft} mos at ${goal.monthlyContribution}/mo
+                        ~{monthsLeft} mos at {formatAmount(goal.monthlyContribution)}/mo
                       </div>
                     )}
                   </div>

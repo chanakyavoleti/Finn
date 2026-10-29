@@ -32,7 +32,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenAddTransacti
     insights, 
     setActivePage,
     isDemoMode,
-    toggleDemoMode
+    toggleDemoMode,
+    formatAmount,
+    primaryCurrency
   } = useFinance();
 
   // If live mode and no accounts/transactions, show guided empty state
@@ -75,10 +77,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenAddTransacti
           {/* Question 1: How much money do I have? */}
           <MetricCard
             label="Total Net Worth"
-            value={`$${metrics.totalNetWorth.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-            subValue="USD"
-            trend={{ value: '+$8,720.00 (+3.6%)', isPositive: true }}
-            secondaryContext={`Cash: $${metrics.liquidCash.toLocaleString()} · Invested: $${metrics.totalInvested.toLocaleString()}`}
+            value={formatAmount(metrics.totalNetWorth)}
+            subValue={primaryCurrency}
+            trend={{ value: '+4.2% MTD', isPositive: true }}
+            secondaryContext={`Cash: ${formatAmount(metrics.liquidCash)} · Invested: ${formatAmount(metrics.totalInvested)}`}
             accent="forest"
             tooltip="Liquid deposits plus brokerage minus credit liabilities"
           />
@@ -86,25 +88,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenAddTransacti
           {/* Question 2: How much did I earn? */}
           <MetricCard
             label="Earned Income (Oct 2026)"
-            value={`$${metrics.totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-            trend={{ value: '2 deposits posted', isNeutral: true }}
-            secondaryContext="Payroll direct deposits & dividends"
+            value={formatAmount(metrics.totalIncome)}
+            trend={{ value: 'Salary & Dividends', isNeutral: true }}
+            secondaryContext="Infosys payroll direct credit & TCS dividends"
           />
 
           {/* Question 3: How much did I spend? */}
           <MetricCard
             label="Total Expenditures (Oct 2026)"
-            value={`$${metrics.totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-            trend={{ value: '-$308 vs Sep', isPositive: true }}
-            secondaryContext="Housing: $2,150.00 · Other: $4,492.00"
+            value={formatAmount(metrics.totalExpenses)}
+            trend={{ value: '-₹3,400 vs Sep', isPositive: true }}
+            secondaryContext="Rent: ₹32,000 · Discretionary: ₹35,469"
           />
 
           {/* Question 4: How much did I save? */}
           <MetricCard
             label="Net Monthly Savings"
-            value={`$${metrics.netSavings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            value={formatAmount(metrics.netSavings)}
             trend={{ value: `${metrics.savingsRatePct.toFixed(1)}% savings rate`, isPositive: true }}
-            secondaryContext="Transferred to Marcus HYSA & Vanguard"
+            secondaryContext="Surplus routed to SBI Reserve & Zerodha SIP"
           />
         </div>
       </section>
@@ -211,7 +213,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenAddTransacti
                     Overall Monthly Allocation
                   </span>
                   <span className="tabular-nums font-semibold text-[#141716] dark:text-[#F0F3F1]">
-                    ${metrics.totalBudgetSpent.toLocaleString()} / ${metrics.totalBudgetLimit.toLocaleString()}
+                    {formatAmount(metrics.totalBudgetSpent)} / {formatAmount(metrics.totalBudgetLimit)}
                   </span>
                 </div>
                 <div className="w-full h-2 rounded bg-[#E8EAE6] dark:bg-[#252E28] overflow-hidden">
@@ -227,7 +229,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenAddTransacti
                   />
                 </div>
                 <div className="flex justify-between items-center text-[11px] text-[#58605C] dark:text-[#9BA6A0] mt-1 tabular-nums">
-                  <span>${(metrics.totalBudgetLimit - metrics.totalBudgetSpent).toLocaleString()} remaining headroom</span>
+                  <span>{formatAmount(Math.max(0, metrics.totalBudgetLimit - metrics.totalBudgetSpent))} remaining headroom</span>
                   <span>{metrics.budgetStatusPct.toFixed(1)}% utilized</span>
                 </div>
               </div>
@@ -245,9 +247,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenAddTransacti
                         </span>
                         <div className="flex items-center gap-2 tabular-nums">
                           <span className={isOver ? 'text-[#991B1B] dark:text-[#F87171] font-semibold' : 'text-[#58605C] dark:text-[#9BA6A0]'}>
-                            ${b.spent.toLocaleString()}
+                            {formatAmount(b.spent)}
                           </span>
-                          <span className="text-[#8A928E] dark:text-[#6B7771]">/ ${b.limit.toLocaleString()}</span>
+                          <span className="text-[#8A928E] dark:text-[#6B7771]">/ {formatAmount(b.limit)}</span>
                           {isOver && (
                             <Badge variant="negative" size="sm">Over limit</Badge>
                           )}
@@ -315,8 +317,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenAddTransacti
                     </div>
 
                     <div className="flex justify-between items-center text-[11px] text-[#58605C] dark:text-[#9BA6A0] tabular-nums">
-                      <span>${goal.currentAmount.toLocaleString()} accumulated</span>
-                      <span>Target: ${goal.targetAmount.toLocaleString()}</span>
+                      <span>{formatAmount(goal.currentAmount)} accumulated</span>
+                      <span>Target: {formatAmount(goal.targetAmount)}</span>
                     </div>
                   </div>
                 );
@@ -385,7 +387,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenAddTransacti
                         </div>
                       </td>
                       <td className="py-2.5 px-4 text-[#58605C] dark:text-[#9BA6A0] hidden sm:table-cell whitespace-nowrap">
-                        {tx.accountName || 'Primary Checking'}
+                        {tx.accountName || 'Primary Account'}
                       </td>
                       <td className="py-2.5 px-4">
                         <Badge variant="neutral" size="sm">
@@ -402,7 +404,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenAddTransacti
                               : 'text-[#141716] dark:text-[#F0F3F1]'
                           }
                         >
-                          {isIncome ? '+' : isTransfer ? '' : '-'}${tx.amount.toFixed(2)}
+                          {isIncome ? '+' : isTransfer ? '' : '-'}{formatAmount(tx.amount)}
                         </span>
                       </td>
                     </tr>
