@@ -57,7 +57,7 @@ BEGIN
       created_at,
       updated_at
     ) VALUES (
-      v_user_a_id::text,
+      v_user_a_id,
       v_user_a_id,
       json_build_object('sub', v_user_a_id::text, 'email', 'user_a_audit@test.com')::jsonb,
       'email',
@@ -111,7 +111,7 @@ BEGIN
       created_at,
       updated_at
     ) VALUES (
-      v_user_b_id::text,
+      v_user_b_id,
       v_user_b_id,
       json_build_object('sub', v_user_b_id::text, 'email', 'user_b_audit@test.com')::jsonb,
       'email',
