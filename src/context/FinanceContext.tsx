@@ -297,6 +297,39 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setInsights(loadSavedData(`finn_insights_${newUid}`, isTargetDemo ? AI_INSIGHTS : []));
   };
 
+  // Asynchronous cloud hydration when storage mode is Supabase
+  useEffect(() => {
+    const currentUid = activeUidRef.current;
+    if (!currentUid || currentUid === 'guest' || isDemoUid(currentUid)) return;
+
+    const mode = RepositoryFactory.getActiveStorageMode();
+    if (mode === 'supabase') {
+      const repo = RepositoryFactory.getRepository();
+      let isMounted = true;
+
+      Promise.all([
+        repo.getAccounts(currentUid),
+        repo.getTransactions(currentUid),
+        repo.getBudgets(currentUid),
+        repo.getHoldings(currentUid),
+        repo.getGoals(currentUid),
+        repo.getSplitExpenses(currentUid)
+      ]).then(([cloudAcc, cloudTx, cloudB, cloudHold, cloudGoals, cloudSplits]) => {
+        if (!isMounted) return;
+        if (cloudAcc && cloudAcc.length > 0) setAccounts(cloudAcc);
+        if (cloudTx && cloudTx.length > 0) setTransactions(cloudTx);
+        if (cloudB && cloudB.length > 0) setBudgets(cloudB);
+        if (cloudHold && cloudHold.length > 0) setHoldings(cloudHold);
+        if (cloudGoals && cloudGoals.length > 0) setGoals(cloudGoals);
+        if (cloudSplits && cloudSplits.length > 0) setSplitExpenses(cloudSplits);
+      }).catch(err => {
+        console.warn('Cloud data hydration notice:', err);
+      });
+
+      return () => { isMounted = false; };
+    }
+  }, [session?.user.id]);
+
   // Apply Theme class to document element
   useEffect(() => {
     const root = document.documentElement;

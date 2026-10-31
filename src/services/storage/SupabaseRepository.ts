@@ -454,8 +454,9 @@ export class SupabaseRepository implements FinanceRepository {
       return 'mutual_fund';
     };
 
+    const holdingId = ensureValidUuid(holding.id);
     const payload = {
-      id: holding.id,
+      id: holdingId,
       user_id: userId,
       symbol: holding.symbol,
       asset_name: holding.name,
@@ -468,7 +469,7 @@ export class SupabaseRepository implements FinanceRepository {
 
     const res = await this.client.query('investments', 'POST', { body: payload });
     if (res.error) return { success: false, error: res.error.message };
-    return { success: true, data: holding };
+    return { success: true, data: { ...holding, id: holdingId } };
   }
 
   async updateHolding(userId: string, holdingId: string, updates: Partial<Holding>): Promise<RepositoryResult<Holding>> {
@@ -497,24 +498,47 @@ export class SupabaseRepository implements FinanceRepository {
 
   // --- SPLIT EXPENSES ---
   async getSplitExpenses(userId: string): Promise<SplitExpense[]> {
-    const res = await this.client.query<any[]>('bill_splits', 'GET', {
-      select: '*',
-      filters: { user_id: `eq.${userId}` }
+    // 1. Get bill groups created by this user
+    const groupRes = await this.client.query<any[]>('bill_groups', 'GET', {
+      select: 'id',
+      filters: { creator_id: `eq.${userId}` }
     });
 
-    if (res.error || !res.data) return [];
+    if (groupRes.error || !groupRes.data || groupRes.data.length === 0) return [];
+    const groupIds = groupRes.data.map(g => g.id);
 
-    return res.data.map(r => ({
-      id: r.id,
-      title: r.title,
-      totalAmount: Number(r.total_amount),
-      paidBy: r.paid_by_name,
-      date: r.split_date,
-      category: r.category,
-      status: r.settlement_status || 'unsettled',
-      participants: typeof r.participants_json === 'string' ? JSON.parse(r.participants_json) : (r.participants_json || []),
-      notes: r.notes || ''
-    }));
+    // 2. Fetch all bill splits for these groups
+    const splits: SplitExpense[] = [];
+    for (const gid of groupIds) {
+      const res = await this.client.query<any[]>('bill_splits', 'GET', {
+        select: '*',
+        filters: { group_id: `eq.${gid}` }
+      });
+      if (res.data) {
+        for (const r of res.data) {
+          let parsedParticipants: any[] = [];
+          try {
+            if (r.notes && r.notes.startsWith('[')) {
+              parsedParticipants = JSON.parse(r.notes);
+            }
+          } catch {}
+
+          splits.push({
+            id: r.id,
+            title: r.title,
+            totalAmount: Number(r.total_amount),
+            paidBy: 'Self',
+            date: r.expense_date,
+            category: r.category,
+            status: r.status as any,
+            participants: parsedParticipants,
+            notes: r.notes || ''
+          });
+        }
+      }
+    }
+
+    return splits;
   }
 
   async saveSplitExpenses(userId: string, expenses: SplitExpense[]): Promise<RepositoryResult<SplitExpense[]>> {
@@ -529,31 +553,76 @@ export class SupabaseRepository implements FinanceRepository {
   }
 
   async addSplitExpense(userId: string, expense: SplitExpense): Promise<RepositoryResult<SplitExpense>> {
+    const splitId = ensureValidUuid(expense.id);
+
+    // Ensure default bill_group exists for user
+    let groupId: string;
+    const existingGroup = await this.client.query<any[]>('bill_groups', 'GET', {
+      select: 'id',
+      filters: { creator_id: `eq.${userId}` }
+    });
+
+    if (existingGroup.data && existingGroup.data.length > 0) {
+      groupId = existingGroup.data[0].id;
+    } else {
+      groupId = crypto.randomUUID();
+      await this.client.query('bill_groups', 'POST', {
+        body: {
+          id: groupId,
+          creator_id: userId,
+          name: 'Personal Shared Bills',
+          currency: 'INR'
+        }
+      });
+    }
+
+    // Ensure participant exists
+    let participantId: string;
+    const participantName = expense.paidBy || 'Self';
+    const existingPart = await this.client.query<any[]>('bill_participants', 'GET', {
+      select: 'id',
+      filters: { group_id: `eq.${groupId}`, display_name: `eq.${participantName}` }
+    });
+
+    if (existingPart.data && existingPart.data.length > 0) {
+      participantId = existingPart.data[0].id;
+    } else {
+      participantId = crypto.randomUUID();
+      await this.client.query('bill_participants', 'POST', {
+        body: {
+          id: participantId,
+          group_id: groupId,
+          user_id: userId,
+          display_name: participantName
+        }
+      });
+    }
+
     const payload = {
-      id: expense.id,
-      user_id: userId,
+      id: splitId,
+      group_id: groupId,
+      payer_participant_id: participantId,
       title: expense.title,
       total_amount: expense.totalAmount,
-      paid_by_name: expense.paidBy,
-      split_date: expense.date,
-      category: expense.category,
-      settlement_status: expense.status,
-      participants_json: expense.participants,
-      notes: expense.notes || ''
+      category: expense.category || 'general',
+      expense_date: expense.date || new Date().toISOString().split('T')[0],
+      split_method: 'equal',
+      status: expense.status === 'settled' ? 'settled' : 'unsettled',
+      notes: expense.participants ? JSON.stringify(expense.participants) : (expense.notes || '')
     };
 
     const res = await this.client.query('bill_splits', 'POST', { body: payload });
     if (res.error) return { success: false, error: res.error.message };
-    return { success: true, data: expense };
+    return { success: true, data: { ...expense, id: splitId } };
   }
 
   async updateSplitExpense(userId: string, expenseId: string, updates: Partial<SplitExpense>): Promise<RepositoryResult<SplitExpense>> {
     const patchBody: Record<string, any> = {};
-    if (updates.status !== undefined) patchBody.settlement_status = updates.status;
-    if (updates.participants !== undefined) patchBody.participants_json = updates.participants;
+    if (updates.status !== undefined) patchBody.status = updates.status;
+    if (updates.participants !== undefined) patchBody.notes = JSON.stringify(updates.participants);
 
     const res = await this.client.query('bill_splits', 'PATCH', {
-      filters: { id: `eq.${expenseId}`, user_id: `eq.${userId}` },
+      filters: { id: `eq.${expenseId}` },
       body: patchBody
     });
 
@@ -563,7 +632,7 @@ export class SupabaseRepository implements FinanceRepository {
 
   async deleteSplitExpense(userId: string, expenseId: string): Promise<RepositoryResult<void>> {
     const res = await this.client.query('bill_splits', 'DELETE', {
-      filters: { id: `eq.${expenseId}`, user_id: `eq.${userId}` }
+      filters: { id: `eq.${expenseId}` }
     });
     if (res.error) return { success: false, error: res.error.message };
     return { success: true };
