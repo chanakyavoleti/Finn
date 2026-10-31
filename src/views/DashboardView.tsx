@@ -68,6 +68,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenAddTransacti
   const upcomingGoal = goals[0];
   const overBudgetItems = budgets.filter(b => b.spent > b.limit);
 
+  // Dynamic context derived from active transactions
+  const incomeTx = transactions.filter(t => t.type === 'income');
+  const topIncomeContext = incomeTx.length > 0
+    ? incomeTx.slice(0, 2).map(t => `${t.merchant} (${formatAmount(t.amount, { compact: true })})`).join(' · ')
+    : 'No earned income recorded';
+
+  const expenseTx = transactions.filter(t => t.type === 'expense');
+  const topExpenseContext = expenseTx.length > 0
+    ? expenseTx.slice(0, 2).map(t => `${t.merchant} (${formatAmount(t.amount, { compact: true })})`).join(' · ')
+    : 'No expenditures recorded';
+
+  const savingsContext = metrics.netSavings >= 0
+    ? 'Net surplus accumulated across liquid & investment reserves'
+    : 'Net deficit drawn down from available cash balances';
+
   return (
     <div className="space-y-6">
       {/* SECTION 1: THE CORE FINANCIAL SUMMARY (Answers Q1, Q2, Q3, Q4) */}
@@ -79,34 +94,38 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenAddTransacti
             label="Total Net Worth"
             value={formatAmount(metrics.totalNetWorth)}
             subValue={primaryCurrency}
-            trend={{ value: '+4.2% MTD', isPositive: true }}
-            secondaryContext={`Cash: ${formatAmount(metrics.liquidCash)} · Invested: ${formatAmount(metrics.totalInvested)}`}
+            trend={{ value: `${accounts.length} Accounts`, isNeutral: true }}
+            secondaryContext={`Cash: ${formatAmount(metrics.liquidCash)} · Invested: ${formatAmount(metrics.totalInvested)}${metrics.totalDebt > 0 ? ` · Debt: ${formatAmount(metrics.totalDebt)}` : ''}`}
             accent="forest"
             tooltip="Liquid deposits plus brokerage minus credit liabilities"
           />
 
           {/* Question 2: How much did I earn? */}
           <MetricCard
-            label="Earned Income (Oct 2026)"
+            label="Earned Income"
             value={formatAmount(metrics.totalIncome)}
-            trend={{ value: 'Salary & Dividends', isNeutral: true }}
-            secondaryContext="Infosys payroll direct credit & TCS dividends"
+            trend={{ value: `${incomeTx.length} credits`, isNeutral: true }}
+            secondaryContext={topIncomeContext}
           />
 
           {/* Question 3: How much did I spend? */}
           <MetricCard
-            label="Total Expenditures (Oct 2026)"
+            label="Total Expenditures"
             value={formatAmount(metrics.totalExpenses)}
-            trend={{ value: '-₹3,400 vs Sep', isPositive: true }}
-            secondaryContext="Rent: ₹32,000 · Discretionary: ₹35,469"
+            trend={{ value: `${expenseTx.length} disbursements`, isNeutral: true }}
+            secondaryContext={topExpenseContext}
           />
 
           {/* Question 4: How much did I save? */}
           <MetricCard
             label="Net Monthly Savings"
             value={formatAmount(metrics.netSavings)}
-            trend={{ value: `${metrics.savingsRatePct.toFixed(1)}% savings rate`, isPositive: true }}
-            secondaryContext="Surplus routed to SBI Reserve & Zerodha SIP"
+            trend={{ 
+              value: `${metrics.savingsRatePct.toFixed(1)}% savings rate`, 
+              isPositive: metrics.netSavings >= 0,
+              isNeutral: metrics.totalIncome === 0 
+            }}
+            secondaryContext={savingsContext}
           />
         </div>
       </section>
@@ -121,12 +140,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenAddTransacti
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-[#141716] dark:text-[#F0F3F1]">
-                  Attention Required: {highPriorityInsight?.title || 'Discretionary Budget Alert'}
+                  {overBudgetItems.length > 0 
+                    ? `Attention Required: Budget Threshold Exceeded (${overBudgetItems[0].categoryName})`
+                    : `Attention Required: ${highPriorityInsight?.title || 'Financial Ledger Current'}`
+                  }
                 </span>
-                <Badge variant="warning" size="sm">Actionable</Badge>
+                <Badge variant={overBudgetItems.length > 0 ? 'negative' : 'warning'} size="sm">
+                  {overBudgetItems.length > 0 ? 'Exceeded' : 'Actionable'}
+                </Badge>
               </div>
               <p className="text-xs text-[#58605C] dark:text-[#9BA6A0] mt-0.5 leading-relaxed">
-                {highPriorityInsight?.summary || 'Review current month category limits to ensure end-of-month target attainment.'}
+                {overBudgetItems.length > 0 
+                  ? `${overBudgetItems[0].categoryName} has disbursed ${formatAmount(overBudgetItems[0].spent)} against limit of ${formatAmount(overBudgetItems[0].limit)} (+${formatAmount(overBudgetItems[0].spent - overBudgetItems[0].limit)} overrun).`
+                  : highPriorityInsight?.summary || 'All monitored budget categories and liquid reserve levels are within planned thresholds.'
+                }
               </p>
             </div>
           </div>
@@ -173,7 +200,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenAddTransacti
         <div className="lg:col-span-5">
           <Card
             title="Spending Distribution"
-            subtitle="October 2026 categorised expenditure"
+            subtitle="Proportional consumption across active expense categories"
             action={
               <button 
                 onClick={() => setActivePage('transactions')} 
@@ -194,7 +221,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenAddTransacti
         <div className="lg:col-span-7">
           <Card
             title="Budget Pacing & Category Thresholds"
-            subtitle="Cycle day 29 of 31 (93.5% of calendar month elapsed)"
+            subtitle={`Cycle day ${new Date().getDate()} of ${new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()} (${Math.round((new Date().getDate() / new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()) * 100)}% of calendar month elapsed)`}
             action={
               <Button 
                 variant="subtle" 

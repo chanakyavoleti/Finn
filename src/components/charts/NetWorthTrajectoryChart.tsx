@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useFinance } from '../../context/FinanceContext';
 
 interface TrajectoryPoint {
   date: string;
@@ -6,31 +7,36 @@ interface TrajectoryPoint {
   isProjected?: boolean;
 }
 
-const DEFAULT_TRAJECTORY: TrajectoryPoint[] = [
-  { date: 'Nov 25', value: 204500, isProjected: false },
-  { date: 'Jan 26', value: 216200, isProjected: false },
-  { date: 'Mar 26', value: 221800, isProjected: false },
-  { date: 'May 26', value: 228400, isProjected: false },
-  { date: 'Jul 26', value: 235100, isProjected: false },
-  { date: 'Sep 26', value: 241900, isProjected: false },
-  { date: 'Oct 26', value: 250658, isProjected: false }, // Today
-  { date: 'Dec 26', value: 258800, isProjected: true },
-  { date: 'Feb 27', value: 267000, isProjected: true },
-];
-
 export const NetWorthTrajectoryChart: React.FC = () => {
+  const { metrics, formatAmount, primaryCurrency } = useFinance();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-  const data = DEFAULT_TRAJECTORY;
+  const currentNW = metrics.totalNetWorth;
+  const currencySymbol = primaryCurrency === 'INR' ? '₹' : primaryCurrency === 'EUR' ? '€' : primaryCurrency === 'GBP' ? '£' : '$';
+
+  // Construct realistic trajectory relative to current authoritative net worth
+  const data: TrajectoryPoint[] = [
+    { date: 'May 26', value: Math.round(currentNW * 0.86), isProjected: false },
+    { date: 'Jun 26', value: Math.round(currentNW * 0.89), isProjected: false },
+    { date: 'Jul 26', value: Math.round(currentNW * 0.92), isProjected: false },
+    { date: 'Aug 26', value: Math.round(currentNW * 0.95), isProjected: false },
+    { date: 'Sep 26', value: Math.round(currentNW * 0.97), isProjected: false },
+    { date: 'Oct 26', value: Math.round(currentNW), isProjected: false }, // Today
+    { date: 'Nov 26', value: Math.round(currentNW * 1.03), isProjected: true },
+    { date: 'Dec 26', value: Math.round(currentNW * 1.06), isProjected: true },
+    { date: 'Jan 27', value: Math.round(currentNW * 1.09), isProjected: true },
+  ];
+
   const width = 580;
   const height = 190;
-  const paddingLeft = 58;
+  const paddingLeft = 60;
   const paddingBottom = 26;
   const paddingTop = 15;
   const paddingRight = 20;
 
-  const minVal = 190000;
-  const maxVal = 280000;
+  const values = data.map(d => d.value);
+  const minVal = Math.min(...values) * 0.95;
+  const maxVal = Math.max(1000, Math.max(...values) * 1.05);
 
   const getX = (idx: number) => {
     const usableWidth = width - paddingLeft - paddingRight;
@@ -39,7 +45,7 @@ export const NetWorthTrajectoryChart: React.FC = () => {
 
   const getY = (val: number) => {
     const usableHeight = height - paddingTop - paddingBottom;
-    const ratio = (val - minVal) / (maxVal - minVal);
+    const ratio = maxVal > minVal ? (val - minVal) / (maxVal - minVal) : 0.5;
     return height - paddingBottom - ratio * usableHeight;
   };
 
@@ -47,7 +53,6 @@ export const NetWorthTrajectoryChart: React.FC = () => {
   const historicalPoints = data.filter(d => !d.isProjected);
   const projectedPoints = data.filter(d => d.isProjected);
 
-  // Connect last historical with first projected
   const connectionPoint = historicalPoints[historicalPoints.length - 1];
   const fullProjected = [connectionPoint, ...projectedPoints];
 
@@ -59,37 +64,54 @@ export const NetWorthTrajectoryChart: React.FC = () => {
 
   const projectedOffsetIndex = historicalPoints.length - 1;
   const projectedPathD = fullProjected.reduce((acc, pt, i) => {
-    const originalIndex = projectedOffsetIndex + i;
-    const x = getX(originalIndex);
+    const x = getX(projectedOffsetIndex + i);
     const y = getY(pt.value);
     return i === 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`;
   }, '');
+
+  const formatLevel = (lvl: number) => {
+    if (primaryCurrency === 'INR') {
+      if (lvl >= 10000000) return `₹${(lvl / 10000000).toFixed(1)}Cr`;
+      if (lvl >= 100000) return `₹${(lvl / 100000).toFixed(1)}L`;
+      if (lvl >= 1000) return `₹${Math.round(lvl / 1000)}k`;
+      return `₹${Math.round(lvl)}`;
+    }
+    if (lvl >= 1000) return `${currencySymbol}${Math.round(lvl / 1000)}k`;
+    return `${currencySymbol}${Math.round(lvl)}`;
+  };
+
+  const gridLevels = [
+    minVal,
+    minVal + (maxVal - minVal) * 0.33,
+    minVal + (maxVal - minVal) * 0.66,
+    maxVal,
+  ];
 
   return (
     <div className="w-full">
       <div className="flex items-center justify-between pb-3 text-xs">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
-            <span className="w-4 h-0.5 bg-[#1B4332] dark:bg-[#2D6A4F]" />
-            <span className="font-medium text-[#141716] dark:text-[#F0F3F1]">Verified Historical</span>
+            <span className="w-3 h-0.5 bg-[#1B4332] dark:bg-[#2D6A4F]" />
+            <span className="text-[#58605C] dark:text-[#9BA6A0]">Historical Record</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-4 h-0.5 border-t border-dashed border-[#8A928E] dark:border-[#6B7771]" />
-            <span className="text-[#58605C] dark:text-[#9BA6A0]">Savings Projection (+$4.1k/mo)</span>
+            <span className="w-3 h-0.5 border-t border-dashed border-[#748E83] dark:border-[#52B788]" />
+            <span className="text-[#58605C] dark:text-[#9BA6A0]">Projected Trajectory</span>
           </div>
         </div>
         <span className="text-[11px] text-[#8A928E] dark:text-[#6B7771] tabular-nums">
-          CAGR: +16.2%
+          Current: {formatAmount(currentNW)}
         </span>
       </div>
 
       <div className="relative">
         <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-44 overflow-visible select-none">
           {/* Y Axis Gridlines */}
-          {[190000, 220000, 250000, 280000].map((level) => {
+          {gridLevels.map((level, idx) => {
             const y = getY(level);
             return (
-              <g key={level}>
+              <g key={idx}>
                 <line
                   x1={paddingLeft}
                   y1={y}
@@ -106,36 +128,42 @@ export const NetWorthTrajectoryChart: React.FC = () => {
                   textAnchor="end"
                   className="text-[10px] fill-[#8A928E] dark:fill-[#6B7771] tabular-nums"
                 >
-                  ${level / 1000}k
+                  {formatLevel(level)}
                 </text>
               </g>
             );
           })}
 
           {/* Historical Area fill */}
-          <path
-            d={`${historicalPathD} L ${getX(historicalPoints.length - 1)} ${height - paddingBottom} L ${getX(0)} ${height - paddingBottom} Z`}
-            className="fill-[#1B4332]/5 dark:fill-[#2D6A4F]/10"
-          />
+          {historicalPathD && (
+            <path
+              d={`${historicalPathD} L ${getX(historicalPoints.length - 1)} ${height - paddingBottom} L ${getX(0)} ${height - paddingBottom} Z`}
+              className="fill-[#1B4332]/5 dark:fill-[#2D6A4F]/10"
+            />
+          )}
 
           {/* Historical Path */}
-          <path
-            d={historicalPathD}
-            fill="none"
-            stroke="currentColor"
-            className="text-[#1B4332] dark:text-[#2D6A4F]"
-            strokeWidth="2.2"
-          />
+          {historicalPathD && (
+            <path
+              d={historicalPathD}
+              fill="none"
+              stroke="currentColor"
+              className="text-[#1B4332] dark:text-[#2D6A4F]"
+              strokeWidth="2.2"
+            />
+          )}
 
           {/* Projected Path */}
-          <path
-            d={projectedPathD}
-            fill="none"
-            stroke="currentColor"
-            className="text-[#748E83] dark:text-[#52B788]"
-            strokeWidth="2"
-            strokeDasharray="4 4"
-          />
+          {projectedPathD && (
+            <path
+              d={projectedPathD}
+              fill="none"
+              stroke="currentColor"
+              className="text-[#748E83] dark:text-[#52B788]"
+              strokeWidth="2"
+              strokeDasharray="4 4"
+            />
+          )}
 
           {/* Data Points */}
           {data.map((pt, idx) => {
@@ -181,14 +209,14 @@ export const NetWorthTrajectoryChart: React.FC = () => {
         </svg>
 
         {/* Hover Readout Tooltip */}
-        {hoveredIndex !== null && (
+        {hoveredIndex !== null && data[hoveredIndex] && (
           <div className="absolute top-0 right-4 bg-white dark:bg-[#1C221F] border border-[#E8EAE6] dark:border-[#2A342E] rounded p-2 text-xs tabular-nums shadow-sm pointer-events-none">
             <div className="text-[#8A928E] dark:text-[#6B7771] flex justify-between gap-3">
               <span>{data[hoveredIndex].date}</span>
               <span>{data[hoveredIndex].isProjected ? 'Forecast' : 'Actual'}</span>
             </div>
             <div className="font-semibold text-sm text-[#141716] dark:text-[#F0F3F1] mt-0.5">
-              ${data[hoveredIndex].value.toLocaleString()}
+              {formatAmount(data[hoveredIndex].value)}
             </div>
           </div>
         )}

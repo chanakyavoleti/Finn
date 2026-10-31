@@ -1,0 +1,1352 @@
+[
+  {
+    "id": 1,
+    "idStr": "TC-001",
+    "desc": "Create income"
+  },
+  {
+    "id": 2,
+    "idStr": "TC-002",
+    "desc": "Create expense"
+  },
+  {
+    "id": 3,
+    "idStr": "TC-003",
+    "desc": "Edit transaction"
+  },
+  {
+    "id": 4,
+    "idStr": "TC-004",
+    "desc": "Delete transaction"
+  },
+  {
+    "id": 5,
+    "idStr": "TC-005",
+    "desc": "Duplicate submission"
+  },
+  {
+    "id": 6,
+    "idStr": "TC-006",
+    "desc": "Empty transaction"
+  },
+  {
+    "id": 7,
+    "idStr": "TC-007",
+    "desc": "Zero amount"
+  },
+  {
+    "id": 8,
+    "idStr": "TC-008",
+    "desc": "Negative expense"
+  },
+  {
+    "id": 9,
+    "idStr": "TC-009",
+    "desc": "Very large amount"
+  },
+  {
+    "id": 10,
+    "idStr": "TC-010",
+    "desc": "Decimal precision"
+  },
+  {
+    "id": 11,
+    "idStr": "TC-011",
+    "desc": "Category change"
+  },
+  {
+    "id": 12,
+    "idStr": "TC-012",
+    "desc": "Transaction search"
+  },
+  {
+    "id": 13,
+    "idStr": "TC-013",
+    "desc": "Date filtering"
+  },
+  {
+    "id": 14,
+    "idStr": "TC-014",
+    "desc": "Type filtering"
+  },
+  {
+    "id": 15,
+    "idStr": "TC-015",
+    "desc": "Transaction persistence"
+  },
+  {
+    "id": 16,
+    "idStr": "TC-016",
+    "desc": "Transaction deletion persistence"
+  },
+  {
+    "id": 17,
+    "idStr": "TC-017",
+    "desc": "Edit persistence"
+  },
+  {
+    "id": 18,
+    "idStr": "TC-018",
+    "desc": "Transaction with special characters"
+  },
+  {
+    "id": 19,
+    "idStr": "TC-019",
+    "desc": "Future-dated transaction"
+  },
+  {
+    "id": 20,
+    "idStr": "TC-020",
+    "desc": "Historical transaction"
+  },
+  {
+    "id": 21,
+    "idStr": "TC-021",
+    "desc": "Dashboard displays correct opening balance."
+  },
+  {
+    "id": 22,
+    "idStr": "TC-022",
+    "desc": "Dashboard displays correct total income."
+  },
+  {
+    "id": 23,
+    "idStr": "TC-023",
+    "desc": "Dashboard displays correct total expenses."
+  },
+  {
+    "id": 24,
+    "idStr": "TC-024",
+    "desc": "Dashboard displays correct net cash flow."
+  },
+  {
+    "id": 25,
+    "idStr": "TC-025",
+    "desc": "Dashboard updates immediately after income creation."
+  },
+  {
+    "id": 26,
+    "idStr": "TC-026",
+    "desc": "Dashboard updates immediately after expense creation."
+  },
+  {
+    "id": 27,
+    "idStr": "TC-027",
+    "desc": "Dashboard updates after transaction editing."
+  },
+  {
+    "id": 28,
+    "idStr": "TC-028",
+    "desc": "Dashboard updates after transaction deletion."
+  },
+  {
+    "id": 29,
+    "idStr": "TC-029",
+    "desc": "Dashboard updates after category modification."
+  },
+  {
+    "id": 30,
+    "idStr": "TC-030",
+    "desc": "Dashboard updates after refund creation."
+  },
+  {
+    "id": 31,
+    "idStr": "TC-031",
+    "desc": "Dashboard updates after account balance adjustment."
+  },
+  {
+    "id": 32,
+    "idStr": "TC-032",
+    "desc": "Dashboard updates after account transfer."
+  },
+  {
+    "id": 33,
+    "idStr": "TC-033",
+    "desc": "Dashboard charts reflect current transaction data."
+  },
+  {
+    "id": 34,
+    "idStr": "TC-034",
+    "desc": "Spending breakdown matches actual category totals."
+  },
+  {
+    "id": 35,
+    "idStr": "TC-035",
+    "desc": "Six-month cash flow matches actual ledger data."
+  },
+  {
+    "id": 36,
+    "idStr": "TC-036",
+    "desc": "Current-month filter works."
+  },
+  {
+    "id": 37,
+    "idStr": "TC-037",
+    "desc": "Previous-month filter works."
+  },
+  {
+    "id": 38,
+    "idStr": "TC-038",
+    "desc": "Custom date range works."
+  },
+  {
+    "id": 39,
+    "idStr": "TC-039",
+    "desc": "Empty dashboard displays correct empty state."
+  },
+  {
+    "id": 40,
+    "idStr": "TC-040",
+    "desc": "Browser refresh preserves dashboard accuracy."
+  },
+  {
+    "id": 41,
+    "idStr": "TC-041",
+    "desc": "Switching users updates all dashboard metrics."
+  },
+  {
+    "id": 42,
+    "idStr": "TC-042",
+    "desc": "Rapid successive transactions do not produce stale values."
+  },
+  {
+    "id": 43,
+    "idStr": "TC-043",
+    "desc": "Editing and deleting multiple transactions preserves accuracy."
+  },
+  {
+    "id": 44,
+    "idStr": "TC-044",
+    "desc": "Dashboard does not include transactions belonging to another user."
+  },
+  {
+    "id": 45,
+    "idStr": "TC-045",
+    "desc": "Dashboard timestamps and reporting periods are accurate."
+  },
+  {
+    "id": 46,
+    "idStr": "TC-046",
+    "desc": "User A registration."
+  },
+  {
+    "id": 47,
+    "idStr": "TC-047",
+    "desc": "User B registration."
+  },
+  {
+    "id": 48,
+    "idStr": "TC-048",
+    "desc": "User A login."
+  },
+  {
+    "id": 49,
+    "idStr": "TC-049",
+    "desc": "User B login."
+  },
+  {
+    "id": 50,
+    "idStr": "TC-050",
+    "desc": "Incorrect password handling."
+  },
+  {
+    "id": 51,
+    "idStr": "TC-051",
+    "desc": "Empty login form validation."
+  },
+  {
+    "id": 52,
+    "idStr": "TC-052",
+    "desc": "Logout."
+  },
+  {
+    "id": 53,
+    "idStr": "TC-053",
+    "desc": "Session restoration after refresh."
+  },
+  {
+    "id": 54,
+    "idStr": "TC-054",
+    "desc": "Switch from User A to User B."
+  },
+  {
+    "id": 55,
+    "idStr": "TC-055",
+    "desc": "Switch from User B to User A."
+  },
+  {
+    "id": 56,
+    "idStr": "TC-056",
+    "desc": "Verify User A's balance is never displayed as User B's balance."
+  },
+  {
+    "id": 57,
+    "idStr": "TC-057",
+    "desc": "Verify User B cannot see User A's transactions."
+  },
+  {
+    "id": 58,
+    "idStr": "TC-058",
+    "desc": "Verify User A cannot see User B's transactions."
+  },
+  {
+    "id": 59,
+    "idStr": "TC-059",
+    "desc": "Add transaction as User A."
+  },
+  {
+    "id": 60,
+    "idStr": "TC-060",
+    "desc": "Switch to User B and verify no contamination."
+  },
+  {
+    "id": 61,
+    "idStr": "TC-061",
+    "desc": "Return to User A and verify transaction persistence."
+  },
+  {
+    "id": 62,
+    "idStr": "TC-062",
+    "desc": "Switch users repeatedly without refreshing."
+  },
+  {
+    "id": 63,
+    "idStr": "TC-063",
+    "desc": "Switch users while dashboard data is loading."
+  },
+  {
+    "id": 64,
+    "idStr": "TC-064",
+    "desc": "Switch users while a transaction is being saved."
+  },
+  {
+    "id": 65,
+    "idStr": "TC-065",
+    "desc": "Logout and press browser Back."
+  },
+  {
+    "id": 66,
+    "idStr": "TC-066",
+    "desc": "Access protected routes without authentication."
+  },
+  {
+    "id": 67,
+    "idStr": "TC-067",
+    "desc": "Verify user-specific budgets."
+  },
+  {
+    "id": 68,
+    "idStr": "TC-068",
+    "desc": "Verify user-specific investment holdings."
+  },
+  {
+    "id": 69,
+    "idStr": "TC-069",
+    "desc": "Verify user-specific savings goals."
+  },
+  {
+    "id": 70,
+    "idStr": "TC-070",
+    "desc": "Verify user-specific preferences."
+  },
+  {
+    "id": 71,
+    "idStr": "TC-071",
+    "desc": "Verify user-specific AI insights."
+  },
+  {
+    "id": 72,
+    "idStr": "TC-072",
+    "desc": "Verify new registrations start with a clean financial workspace."
+  },
+  {
+    "id": 73,
+    "idStr": "TC-073",
+    "desc": "Verify existing users retain their data after switching."
+  },
+  {
+    "id": 74,
+    "idStr": "TC-074",
+    "desc": "Verify expired or malformed sessions are handled safely."
+  },
+  {
+    "id": 75,
+    "idStr": "TC-075",
+    "desc": "Verify failed login does not create an authenticated session."
+  },
+  {
+    "id": 76,
+    "idStr": "TC-076",
+    "desc": "Create savings account."
+  },
+  {
+    "id": 77,
+    "idStr": "TC-077",
+    "desc": "Create current account."
+  },
+  {
+    "id": 78,
+    "idStr": "TC-078",
+    "desc": "Create cash account."
+  },
+  {
+    "id": 79,
+    "idStr": "TC-079",
+    "desc": "Edit account name."
+  },
+  {
+    "id": 80,
+    "idStr": "TC-080",
+    "desc": "Edit account balance using the supported adjustment workflow."
+  },
+  {
+    "id": 81,
+    "idStr": "TC-081",
+    "desc": "Delete an unused account."
+  },
+  {
+    "id": 82,
+    "idStr": "TC-082",
+    "desc": "Attempt to delete an account containing transactions."
+  },
+  {
+    "id": 83,
+    "idStr": "TC-083",
+    "desc": "Transfer money between accounts."
+  },
+  {
+    "id": 84,
+    "idStr": "TC-084",
+    "desc": "Transfer entire available balance."
+  },
+  {
+    "id": 85,
+    "idStr": "TC-085",
+    "desc": "Reject transfers exceeding available balance if overdrafts are unsupported."
+  },
+  {
+    "id": 86,
+    "idStr": "TC-086",
+    "desc": "Verify transfer source and destination."
+  },
+  {
+    "id": 87,
+    "idStr": "TC-087",
+    "desc": "Verify transfer does not count as income."
+  },
+  {
+    "id": 88,
+    "idStr": "TC-088",
+    "desc": "Verify transfer does not count as expense."
+  },
+  {
+    "id": 89,
+    "idStr": "TC-089",
+    "desc": "Verify combined account balance remains unchanged after internal transfer."
+  },
+  {
+    "id": 90,
+    "idStr": "TC-090",
+    "desc": "Refresh and verify account persistence."
+  },
+  {
+    "id": 91,
+    "idStr": "TC-091",
+    "desc": "Create monthly budget."
+  },
+  {
+    "id": 92,
+    "idStr": "TC-092",
+    "desc": "Edit monthly budget."
+  },
+  {
+    "id": 93,
+    "idStr": "TC-093",
+    "desc": "Delete budget."
+  },
+  {
+    "id": 94,
+    "idStr": "TC-094",
+    "desc": "Add expense to budget category."
+  },
+  {
+    "id": 95,
+    "idStr": "TC-095",
+    "desc": "Verify budget utilization."
+  },
+  {
+    "id": 96,
+    "idStr": "TC-096",
+    "desc": "Verify remaining budget."
+  },
+  {
+    "id": 97,
+    "idStr": "TC-097",
+    "desc": "Change transaction category."
+  },
+  {
+    "id": 98,
+    "idStr": "TC-098",
+    "desc": "Delete a budget-related transaction."
+  },
+  {
+    "id": 99,
+    "idStr": "TC-099",
+    "desc": "Add refund to a budget category."
+  },
+  {
+    "id": 100,
+    "idStr": "TC-100",
+    "desc": "Verify refund treatment."
+  },
+  {
+    "id": 101,
+    "idStr": "TC-101",
+    "desc": "Exceed budget limit."
+  },
+  {
+    "id": 102,
+    "idStr": "TC-102",
+    "desc": "Verify overspending indicator."
+  },
+  {
+    "id": 103,
+    "idStr": "TC-103",
+    "desc": "Create budget with zero limit."
+  },
+  {
+    "id": 104,
+    "idStr": "TC-104",
+    "desc": "Create budget for another reporting period."
+  },
+  {
+    "id": 105,
+    "idStr": "TC-105",
+    "desc": "Verify budgets remain isolated between users."
+  },
+  {
+    "id": 106,
+    "idStr": "TC-106",
+    "desc": "Refresh and verify budget persistence."
+  },
+  {
+    "id": 107,
+    "idStr": "TC-107",
+    "desc": "Verify budget progress updates without refreshing the page."
+  },
+  {
+    "id": 108,
+    "idStr": "TC-108",
+    "desc": "Verify monthly spending analytics."
+  },
+  {
+    "id": 109,
+    "idStr": "TC-109",
+    "desc": "Verify annual spending analytics."
+  },
+  {
+    "id": 110,
+    "idStr": "TC-110",
+    "desc": "Verify income versus expenses."
+  },
+  {
+    "id": 111,
+    "idStr": "TC-111",
+    "desc": "Verify category allocation."
+  },
+  {
+    "id": 112,
+    "idStr": "TC-112",
+    "desc": "Verify monthly savings rate."
+  },
+  {
+    "id": 113,
+    "idStr": "TC-113",
+    "desc": "Verify net worth calculation."
+  },
+  {
+    "id": 114,
+    "idStr": "TC-114",
+    "desc": "Verify six-month cash flow."
+  },
+  {
+    "id": 115,
+    "idStr": "TC-115",
+    "desc": "Verify custom date filtering."
+  },
+  {
+    "id": 116,
+    "idStr": "TC-116",
+    "desc": "Verify empty chart states."
+  },
+  {
+    "id": 117,
+    "idStr": "TC-117",
+    "desc": "Verify charts update after editing transactions."
+  },
+  {
+    "id": 118,
+    "idStr": "TC-118",
+    "desc": "Verify charts update after deleting transactions."
+  },
+  {
+    "id": 119,
+    "idStr": "TC-119",
+    "desc": "Verify charts update after switching users."
+  },
+  {
+    "id": 120,
+    "idStr": "TC-120",
+    "desc": "Verify Indian financial year boundaries."
+  },
+  {
+    "id": 121,
+    "idStr": "TC-121",
+    "desc": "Verify leap-year reporting."
+  },
+  {
+    "id": 122,
+    "idStr": "TC-122",
+    "desc": "Verify correct Indian number formatting."
+  },
+  {
+    "id": 123,
+    "idStr": "TC-123",
+    "desc": "Verify export data matches the displayed report."
+  },
+  {
+    "id": 124,
+    "idStr": "TC-124",
+    "desc": "Add Indian equity holding."
+  },
+  {
+    "id": 125,
+    "idStr": "TC-125",
+    "desc": "Add US equity holding."
+  },
+  {
+    "id": 126,
+    "idStr": "TC-126",
+    "desc": "Add mutual fund holding."
+  },
+  {
+    "id": 127,
+    "idStr": "TC-127",
+    "desc": "Add fixed deposit."
+  },
+  {
+    "id": 128,
+    "idStr": "TC-128",
+    "desc": "Add sovereign gold bond."
+  },
+  {
+    "id": 129,
+    "idStr": "TC-129",
+    "desc": "Add cryptocurrency holding if supported."
+  },
+  {
+    "id": 130,
+    "idStr": "TC-130",
+    "desc": "Edit holding."
+  },
+  {
+    "id": 131,
+    "idStr": "TC-131",
+    "desc": "Delete holding."
+  },
+  {
+    "id": 132,
+    "idStr": "TC-132",
+    "desc": "Add multiple purchases of the same asset."
+  },
+  {
+    "id": 133,
+    "idStr": "TC-133",
+    "desc": "Verify weighted-average cost basis."
+  },
+  {
+    "id": 134,
+    "idStr": "TC-134",
+    "desc": "Sell part of a holding."
+  },
+  {
+    "id": 135,
+    "idStr": "TC-135",
+    "desc": "Verify remaining quantity."
+  },
+  {
+    "id": 136,
+    "idStr": "TC-136",
+    "desc": "Verify realized gains."
+  },
+  {
+    "id": 137,
+    "idStr": "TC-137",
+    "desc": "Verify unrealized gains."
+  },
+  {
+    "id": 138,
+    "idStr": "TC-138",
+    "desc": "Test zero market price."
+  },
+  {
+    "id": 139,
+    "idStr": "TC-139",
+    "desc": "Test missing market price."
+  },
+  {
+    "id": 140,
+    "idStr": "TC-140",
+    "desc": "Test stale market price."
+  },
+  {
+    "id": 141,
+    "idStr": "TC-141",
+    "desc": "Verify portfolio allocation."
+  },
+  {
+    "id": 142,
+    "idStr": "TC-142",
+    "desc": "Verify investment totals are not double-counted in net worth."
+  },
+  {
+    "id": 143,
+    "idStr": "TC-143",
+    "desc": "Verify investment contributions are not counted as ordinary expenses inappropriately."
+  },
+  {
+    "id": 144,
+    "idStr": "TC-144",
+    "desc": "Verify investment data persists after refresh."
+  },
+  {
+    "id": 145,
+    "idStr": "TC-145",
+    "desc": "Verify user isolation."
+  },
+  {
+    "id": 146,
+    "idStr": "TC-146",
+    "desc": "Verify tax calculation boundary cases using independently validated applicable rules."
+  },
+  {
+    "id": 147,
+    "idStr": "TC-147",
+    "desc": "Create savings goal."
+  },
+  {
+    "id": 148,
+    "idStr": "TC-148",
+    "desc": "Edit savings goal."
+  },
+  {
+    "id": 149,
+    "idStr": "TC-149",
+    "desc": "Delete savings goal."
+  },
+  {
+    "id": 150,
+    "idStr": "TC-150",
+    "desc": "Add savings contribution."
+  },
+  {
+    "id": 151,
+    "idStr": "TC-151",
+    "desc": "Verify contribution progress."
+  },
+  {
+    "id": 152,
+    "idStr": "TC-152",
+    "desc": "Verify remaining amount."
+  },
+  {
+    "id": 153,
+    "idStr": "TC-153",
+    "desc": "Verify target completion."
+  },
+  {
+    "id": 154,
+    "idStr": "TC-154",
+    "desc": "Test contribution greater than remaining target."
+  },
+  {
+    "id": 155,
+    "idStr": "TC-155",
+    "desc": "Test zero target."
+  },
+  {
+    "id": 156,
+    "idStr": "TC-156",
+    "desc": "Test missing target date."
+  },
+  {
+    "id": 157,
+    "idStr": "TC-157",
+    "desc": "Verify monthly contribution calculation."
+  },
+  {
+    "id": 158,
+    "idStr": "TC-158",
+    "desc": "Verify FIRE corpus calculation."
+  },
+  {
+    "id": 159,
+    "idStr": "TC-159",
+    "desc": "Verify inflation-adjusted projections."
+  },
+  {
+    "id": 160,
+    "idStr": "TC-160",
+    "desc": "Verify conservative return scenario."
+  },
+  {
+    "id": 161,
+    "idStr": "TC-161",
+    "desc": "Verify base return scenario."
+  },
+  {
+    "id": 162,
+    "idStr": "TC-162",
+    "desc": "Verify accelerated return scenario."
+  },
+  {
+    "id": 163,
+    "idStr": "TC-163",
+    "desc": "Test zero investment return."
+  },
+  {
+    "id": 164,
+    "idStr": "TC-164",
+    "desc": "Test negative real return."
+  },
+  {
+    "id": 165,
+    "idStr": "TC-165",
+    "desc": "Verify safe withdrawal assumptions."
+  },
+  {
+    "id": 166,
+    "idStr": "TC-166",
+    "desc": "Verify all calculations against independent reference calculations."
+  },
+  {
+    "id": 167,
+    "idStr": "TC-167",
+    "desc": "Verify savings goals are isolated between users."
+  },
+  {
+    "id": 168,
+    "idStr": "TC-168",
+    "desc": "Create group."
+  },
+  {
+    "id": 169,
+    "idStr": "TC-169",
+    "desc": "Add participants."
+  },
+  {
+    "id": 170,
+    "idStr": "TC-170",
+    "desc": "Remove participants."
+  },
+  {
+    "id": 171,
+    "idStr": "TC-171",
+    "desc": "Create equal split."
+  },
+  {
+    "id": 172,
+    "idStr": "TC-172",
+    "desc": "Create custom split."
+  },
+  {
+    "id": 173,
+    "idStr": "TC-173",
+    "desc": "Create percentage split."
+  },
+  {
+    "id": 174,
+    "idStr": "TC-174",
+    "desc": "Split ₹1,000 among three participants."
+  },
+  {
+    "id": 175,
+    "idStr": "TC-175",
+    "desc": "Split ₹1 among three participants."
+  },
+  {
+    "id": 176,
+    "idStr": "TC-176",
+    "desc": "Split ₹0.01 among three participants."
+  },
+  {
+    "id": 177,
+    "idStr": "TC-177",
+    "desc": "Verify all allocations sum to the exact original bill."
+  },
+  {
+    "id": 178,
+    "idStr": "TC-178",
+    "desc": "Record settlement."
+  },
+  {
+    "id": 179,
+    "idStr": "TC-179",
+    "desc": "Edit settlement."
+  },
+  {
+    "id": 180,
+    "idStr": "TC-180",
+    "desc": "Reverse settlement."
+  },
+  {
+    "id": 181,
+    "idStr": "TC-181",
+    "desc": "Prevent duplicate settlement."
+  },
+  {
+    "id": 182,
+    "idStr": "TC-182",
+    "desc": "Verify participant balances."
+  },
+  {
+    "id": 183,
+    "idStr": "TC-183",
+    "desc": "Verify group data permissions."
+  },
+  {
+    "id": 184,
+    "idStr": "TC-184",
+    "desc": "Verify bill-splitting persistence."
+  },
+  {
+    "id": 185,
+    "idStr": "TC-185",
+    "desc": "Convert INR to USD."
+  },
+  {
+    "id": 186,
+    "idStr": "TC-186",
+    "desc": "Convert USD to INR."
+  },
+  {
+    "id": 187,
+    "idStr": "TC-187",
+    "desc": "Convert EUR to INR."
+  },
+  {
+    "id": 188,
+    "idStr": "TC-188",
+    "desc": "Convert GBP to INR."
+  },
+  {
+    "id": 189,
+    "idStr": "TC-189",
+    "desc": "Convert zero amount."
+  },
+  {
+    "id": 190,
+    "idStr": "TC-190",
+    "desc": "Reject negative amount."
+  },
+  {
+    "id": 191,
+    "idStr": "TC-191",
+    "desc": "Handle missing exchange rate."
+  },
+  {
+    "id": 192,
+    "idStr": "TC-192",
+    "desc": "Handle invalid exchange rate."
+  },
+  {
+    "id": 193,
+    "idStr": "TC-193",
+    "desc": "Handle stale exchange rate."
+  },
+  {
+    "id": 194,
+    "idStr": "TC-194",
+    "desc": "Verify currency precision."
+  },
+  {
+    "id": 195,
+    "idStr": "TC-195",
+    "desc": "Verify exchange-rate timestamps."
+  },
+  {
+    "id": 196,
+    "idStr": "TC-196",
+    "desc": "Verify currency formatting."
+  },
+  {
+    "id": 197,
+    "idStr": "TC-197",
+    "desc": "Verify conversion calculations independently."
+  },
+  {
+    "id": 198,
+    "idStr": "TC-198",
+    "desc": "Import supported HDFC statement."
+  },
+  {
+    "id": 199,
+    "idStr": "TC-199",
+    "desc": "Import supported ICICI statement."
+  },
+  {
+    "id": 200,
+    "idStr": "TC-200",
+    "desc": "Import supported SBI statement."
+  },
+  {
+    "id": 201,
+    "idStr": "TC-201",
+    "desc": "Import empty CSV."
+  },
+  {
+    "id": 202,
+    "idStr": "TC-202",
+    "desc": "Import malformed CSV."
+  },
+  {
+    "id": 203,
+    "idStr": "TC-203",
+    "desc": "Import duplicate transactions."
+  },
+  {
+    "id": 204,
+    "idStr": "TC-204",
+    "desc": "Import the same statement twice."
+  },
+  {
+    "id": 205,
+    "idStr": "TC-205",
+    "desc": "Import invalid dates."
+  },
+  {
+    "id": 206,
+    "idStr": "TC-206",
+    "desc": "Import unusual merchant descriptions."
+  },
+  {
+    "id": 207,
+    "idStr": "TC-207",
+    "desc": "Import special characters."
+  },
+  {
+    "id": 208,
+    "idStr": "TC-208",
+    "desc": "Import debit and credit transactions."
+  },
+  {
+    "id": 209,
+    "idStr": "TC-209",
+    "desc": "Verify imported transaction amounts."
+  },
+  {
+    "id": 210,
+    "idStr": "TC-210",
+    "desc": "Verify imported transaction dates."
+  },
+  {
+    "id": 211,
+    "idStr": "TC-211",
+    "desc": "Verify duplicate detection."
+  },
+  {
+    "id": 212,
+    "idStr": "TC-212",
+    "desc": "Export transactions."
+  },
+  {
+    "id": 213,
+    "idStr": "TC-213",
+    "desc": "Export reports."
+  },
+  {
+    "id": 214,
+    "idStr": "TC-214",
+    "desc": "Verify exported amounts against source records."
+  },
+  {
+    "id": 215,
+    "idStr": "TC-215",
+    "desc": "Test CSV formula injection prevention."
+  },
+  {
+    "id": 216,
+    "idStr": "TC-216",
+    "desc": "Verify failed imports do not leave partially corrupted financial records."
+  },
+  {
+    "id": 217,
+    "idStr": "TC-217",
+    "desc": "Generate spending summary."
+  },
+  {
+    "id": 218,
+    "idStr": "TC-218",
+    "desc": "Generate savings analysis."
+  },
+  {
+    "id": 219,
+    "idStr": "TC-219",
+    "desc": "Generate budget insights."
+  },
+  {
+    "id": 220,
+    "idStr": "TC-220",
+    "desc": "Generate emergency fund analysis."
+  },
+  {
+    "id": 221,
+    "idStr": "TC-221",
+    "desc": "Verify insights use the active user's data."
+  },
+  {
+    "id": 222,
+    "idStr": "TC-222",
+    "desc": "Verify insights update after financial changes."
+  },
+  {
+    "id": 223,
+    "idStr": "TC-223",
+    "desc": "Verify user switching does not leak previous financial context."
+  },
+  {
+    "id": 224,
+    "idStr": "TC-224",
+    "desc": "Handle empty financial history."
+  },
+  {
+    "id": 225,
+    "idStr": "TC-225",
+    "desc": "Handle invalid or incomplete financial data."
+  },
+  {
+    "id": 226,
+    "idStr": "TC-226",
+    "desc": "Handle unavailable external AI service if one is configured."
+  },
+  {
+    "id": 227,
+    "idStr": "TC-227",
+    "desc": "Verify offline fallback behavior if implemented."
+  },
+  {
+    "id": 228,
+    "idStr": "TC-228",
+    "desc": "Verify financial recommendations identify assumptions and uncertainty."
+  },
+  {
+    "id": 229,
+    "idStr": "TC-229",
+    "desc": "Every navigation item."
+  },
+  {
+    "id": 230,
+    "idStr": "TC-230",
+    "desc": "Every visible button."
+  },
+  {
+    "id": 231,
+    "idStr": "TC-231",
+    "desc": "Every form submission."
+  },
+  {
+    "id": 232,
+    "idStr": "TC-232",
+    "desc": "Every modal opening and closing action."
+  },
+  {
+    "id": 233,
+    "idStr": "TC-233",
+    "desc": "Every cancel action."
+  },
+  {
+    "id": 234,
+    "idStr": "TC-234",
+    "desc": "Every confirmation dialog."
+  },
+  {
+    "id": 235,
+    "idStr": "TC-235",
+    "desc": "Keyboard navigation."
+  },
+  {
+    "id": 236,
+    "idStr": "TC-236",
+    "desc": "Tab order."
+  },
+  {
+    "id": 237,
+    "idStr": "TC-237",
+    "desc": "Form validation messages."
+  },
+  {
+    "id": 238,
+    "idStr": "TC-238",
+    "desc": "Empty states."
+  },
+  {
+    "id": 239,
+    "idStr": "TC-239",
+    "desc": "Loading states."
+  },
+  {
+    "id": 240,
+    "idStr": "TC-240",
+    "desc": "Error states."
+  },
+  {
+    "id": 241,
+    "idStr": "TC-241",
+    "desc": "Desktop viewport."
+  },
+  {
+    "id": 242,
+    "idStr": "TC-242",
+    "desc": "Tablet viewport."
+  },
+  {
+    "id": 243,
+    "idStr": "TC-243",
+    "desc": "Mobile viewport."
+  },
+  {
+    "id": 244,
+    "idStr": "TC-244",
+    "desc": "Responsive charts."
+  },
+  {
+    "id": 245,
+    "idStr": "TC-245",
+    "desc": "Sidebar behavior."
+  },
+  {
+    "id": 246,
+    "idStr": "TC-246",
+    "desc": "Dark mode."
+  },
+  {
+    "id": 247,
+    "idStr": "TC-247",
+    "desc": "Light mode."
+  },
+  {
+    "id": 248,
+    "idStr": "TC-248",
+    "desc": "Browser console errors."
+  },
+  {
+    "id": 249,
+    "idStr": "TC-249",
+    "desc": "Failed network requests."
+  },
+  {
+    "id": 250,
+    "idStr": "TC-250",
+    "desc": "Repeated navigation without application crashes."
+  },
+  {
+    "id": 251,
+    "idStr": "TC-251",
+    "desc": "Long transaction descriptions."
+  },
+  {
+    "id": 252,
+    "idStr": "TC-252",
+    "desc": "Large transaction histories."
+  },
+  {
+    "id": 253,
+    "idStr": "TC-253",
+    "desc": "Multiple rapid interactions."
+  },
+  {
+    "id": 254,
+    "idStr": "TC-254",
+    "desc": "Browser refresh on every major page."
+  },
+  {
+    "id": 255,
+    "idStr": "TC-255",
+    "desc": "Browser Back and Forward navigation."
+  },
+  {
+    "id": 256,
+    "idStr": "TC-256",
+    "desc": "Verify private user data isolation."
+  },
+  {
+    "id": 257,
+    "idStr": "TC-257",
+    "desc": "Verify unauthorized record modification is rejected."
+  },
+  {
+    "id": 258,
+    "idStr": "TC-258",
+    "desc": "Verify unauthorized record deletion is rejected."
+  },
+  {
+    "id": 259,
+    "idStr": "TC-259",
+    "desc": "Verify malformed input handling."
+  },
+  {
+    "id": 260,
+    "idStr": "TC-260",
+    "desc": "Verify XSS protection in merchant descriptions."
+  },
+  {
+    "id": 261,
+    "idStr": "TC-261",
+    "desc": "Verify unsafe HTML is not rendered."
+  },
+  {
+    "id": 262,
+    "idStr": "TC-262",
+    "desc": "Verify CSV formula injection protection."
+  },
+  {
+    "id": 263,
+    "idStr": "TC-263",
+    "desc": "Verify authentication secrets are not exposed in frontend code."
+  },
+  {
+    "id": 264,
+    "idStr": "TC-264",
+    "desc": "Verify sensitive data is not unnecessarily logged."
+  },
+  {
+    "id": 265,
+    "idStr": "TC-265",
+    "desc": "Verify session cleanup on logout."
+  },
+  {
+    "id": 266,
+    "idStr": "TC-266",
+    "desc": "Verify application handles malformed persisted records."
+  },
+  {
+    "id": 267,
+    "idStr": "TC-267",
+    "desc": "Verify data remains intact after simulated application restart."
+  },
+  {
+    "id": 268,
+    "idStr": "TC-268",
+    "desc": "Verify concurrent updates do not silently overwrite newer financial records."
+  },
+  {
+    "id": 269,
+    "idStr": "TC-269",
+    "desc": "Verify transaction calculations remain consistent after repeated edits and reversals."
+  },
+  {
+    "id": 270,
+    "idStr": "TC-270",
+    "desc": "Verify all financial records maintain their ownership relationships."
+  }
+]

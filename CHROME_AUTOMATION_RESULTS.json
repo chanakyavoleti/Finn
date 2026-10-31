@@ -1,0 +1,54 @@
+{
+  "browser": "Chrome/156.0.8078.49",
+  "testResults": [
+    {
+      "name": "Initial Page Load & Brand Header Rendering",
+      "status": "PASS",
+      "detail": "Page title: \"FINN — Financial Intelligence & Wealth Management\", Brand present: true"
+    },
+    {
+      "name": "Dark Mode / Light Mode Toggle via DOM",
+      "status": "PASS",
+      "detail": "Initial: false, After toggle: true"
+    },
+    {
+      "name": "Navigation: Dashboard -> Transactions -> Budgets -> Investments",
+      "status": "PASS",
+      "detail": "All 4 views rendered properly without DOM errors"
+    },
+    {
+      "name": "Transaction Modal Lifecycle (Open / Input / Cancel)",
+      "status": "PASS",
+      "detail": "Modal opened and dismissed cleanly"
+    },
+    {
+      "name": "Mobile Viewport (375x667) Layout Responsiveness",
+      "status": "PASS",
+      "detail": "Mobile viewport active, clientWidth: 375px"
+    },
+    {
+      "name": "Tablet Viewport (768x1024) Layout Responsiveness",
+      "status": "PASS",
+      "detail": "Tablet viewport active, clientWidth: 768px"
+    },
+    {
+      "name": "Browser Refresh (Page.reload) Session Resilience",
+      "status": "PASS",
+      "detail": "State re-hydrated cleanly after Page.reload"
+    },
+    {
+      "name": "Multiple Tabs (Concurrent Targets)",
+      "status": "PASS",
+      "detail": "Second tab loaded successfully with title \"FINN — Financial Intelligence & Wealth Management\""
+    },
+    {
+      "name": "Browser History Back & Forward Navigation",
+      "status": "PASS",
+      "detail": "History entries: 1, currentIndex: 0"
+    }
+  ],
+  "consoleLogsCount": 0,
+  "consoleErrors": [],
+  "networkFailuresCount": 0,
+  "timestamp": "2026-10-31T07:00:10.798Z"
+}

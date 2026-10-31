@@ -25,9 +25,15 @@ export const BudgetsView: React.FC = () => {
   const [newLimit, setNewLimit] = useState('');
   const [editLimitVal, setEditLimitVal] = useState('');
 
-  const daysInMonth = 31;
-  const currentDay = 29;
+  const now = new Date();
+  const currentDay = now.getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const monthElapsedPct = (currentDay / daysInMonth) * 100;
+
+  const overrunBudgets = budgets.filter(b => b.spent > b.limit);
+  const overrunSummary = overrunBudgets.length > 0 
+    ? `Overrun: ${overrunBudgets.map(b => b.categoryName).join(', ')}`
+    : 'All tracked categories within allocation limits';
 
   const handleAddBudgetSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,11 +99,11 @@ export const BudgetsView: React.FC = () => {
           value={`${budgets.filter(b => b.spent <= b.limit).length} of ${budgets.length}`}
           subValue="on track"
           trend={{ 
-            value: budgets.some(b => b.spent > b.limit) ? '1 overrun' : '100% healthy', 
-            isPositive: !budgets.some(b => b.spent > b.limit),
+            value: overrunBudgets.length > 0 ? `${overrunBudgets.length} overrun` : '100% healthy', 
+            isPositive: overrunBudgets.length === 0,
             isNeutral: false
           }}
-          secondaryContext="Overrun: Shopping & Apparel"
+          secondaryContext={overrunSummary}
         />
       </div>
 

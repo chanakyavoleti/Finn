@@ -20,14 +20,14 @@ import {
 import { Account, AccountType } from '../types';
 
 export const AccountsSyncView: React.FC = () => {
-  const { accounts, syncAccount, syncAllAccounts, addAccount } = useFinance();
+  const { accounts, syncAccount, syncAllAccounts, addAccount, formatAmount, primaryCurrency } = useFinance();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [syncingAll, setSyncingAll] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
 
   // New account form state
-  const [institution, setInstitution] = useState('Chase Bank');
+  const [institution, setInstitution] = useState('HDFC Bank');
   const [name, setName] = useState('');
   const [type, setType] = useState<AccountType>('checking');
   const [balance, setBalance] = useState('');
@@ -55,7 +55,7 @@ export const AccountsSyncView: React.FC = () => {
       institution: institution.trim(),
       type,
       balance: parsedBalance,
-      currency: 'USD',
+      currency: primaryCurrency,
       accountNumberMask: accountNumberMask.trim() ? `•••• ${accountNumberMask.trim()}` : '•••• 1234',
     });
 
@@ -66,7 +66,7 @@ export const AccountsSyncView: React.FC = () => {
   };
 
   const totalConnectedBalance = accounts.reduce((sum, a) => {
-    return a.type === 'credit' ? sum - Math.abs(a.balance) : sum + a.balance;
+    return a.type === 'credit' ? (a.balance < 0 ? sum - Math.abs(a.balance) : sum + a.balance) : sum + a.balance;
   }, 0);
 
   return (
@@ -81,7 +81,7 @@ export const AccountsSyncView: React.FC = () => {
         />
         <MetricCard
           label="Reconciled Ledger Balance"
-          value={`$${totalConnectedBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          value={formatAmount(totalConnectedBalance)}
           secondaryContext="Aggregated across depository & brokerage"
         />
         <MetricCard

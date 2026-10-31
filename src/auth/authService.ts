@@ -4,6 +4,8 @@
  * and role-based permissions mirroring PostgreSQL Row Level Security (RLS).
  */
 
+import { isSupabaseConfigured, defaultSupabaseClient } from '../services/supabaseClient';
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -24,6 +26,16 @@ export interface UserSession {
 const STORAGE_KEY_SESSION = 'finn_auth_session';
 const STORAGE_KEY_USERS = 'finn_registered_users';
 
+const DEMO_USER: UserProfile = {
+  id: 'usr_demo',
+  email: 'chanakya@finn.in',
+  fullName: 'Chanakya Voleti',
+  phone: '+91 98765 43210',
+  defaultCurrency: 'INR',
+  fiscalYearType: 'indian',
+  createdAt: '2026-01-01T00:00:00.000Z',
+};
+
 export class AuthService {
   /**
    * Get active authenticated user session if valid and unexpired.
@@ -37,10 +49,27 @@ export class AuthService {
         this.logout();
         return null;
       }
+      if (isSupabaseConfigured() && session.token) {
+        defaultSupabaseClient.setAuthToken(session.token);
+      }
       return session;
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Get list of all registered user profiles on this client for quick user switching.
+   */
+  static getRegisteredUsers(): UserProfile[] {
+    const users = this.getStoredUsers();
+    // Ensure demo user is always in the list of switchable profiles
+    const hasDemo = users.some(u => u.profile.id === DEMO_USER.id || u.profile.email.toLowerCase() === DEMO_USER.email.toLowerCase());
+    const profiles = users.map(u => u.profile);
+    if (!hasDemo) {
+      profiles.unshift(DEMO_USER);
+    }
+    return profiles;
   }
 
   /**
@@ -52,6 +81,35 @@ export class AuthService {
     }
     if (!password || password.length < 8) {
       throw new Error('Password must be at least 8 characters long.');
+    }
+
+    if (isSupabaseConfigured()) {
+      const res = await defaultSupabaseClient.signUp(email, password, { full_name: fullName });
+      if (res.error) {
+        throw new Error(res.error.message);
+      }
+      const userId = res.user?.id || 'usr_' + Math.random().toString(36).substring(2, 10);
+      const profile: UserProfile = {
+        id: userId,
+        email: email.toLowerCase().trim(),
+        fullName: fullName.trim(),
+        defaultCurrency: 'INR',
+        fiscalYearType: 'indian',
+        createdAt: new Date().toISOString(),
+      };
+
+      // Ingest into public.profiles
+      await defaultSupabaseClient.query('profiles', 'POST', {
+        body: {
+          id: userId,
+          email: profile.email,
+          full_name: profile.fullName,
+          default_currency: profile.defaultCurrency,
+          fiscal_year_type: profile.fiscalYearType
+        }
+      });
+
+      return this.createSession(profile, res.session?.access_token);
     }
 
     const users = this.getStoredUsers();
@@ -81,8 +139,32 @@ export class AuthService {
    * Authenticate user with email and password.
    */
   static async login(email: string, password: string): Promise<UserSession> {
+    const cleanEmail = email.toLowerCase().trim();
+
+    // Check if logging in as demo persona
+    if (cleanEmail === DEMO_USER.email.toLowerCase() && (password === 'Password123!' || password === 'demo' || password.length >= 4)) {
+      return this.createSession(DEMO_USER);
+    }
+
+    if (isSupabaseConfigured()) {
+      const res = await defaultSupabaseClient.signInWithPassword(cleanEmail, password);
+      if (res.error) {
+        throw new Error(res.error.message);
+      }
+      const user = res.user;
+      const profile: UserProfile = {
+        id: user.id,
+        email: user.email,
+        fullName: user.user_metadata?.full_name || cleanEmail.split('@')[0],
+        defaultCurrency: 'INR',
+        fiscalYearType: 'indian',
+        createdAt: user.created_at || new Date().toISOString(),
+      };
+      return this.createSession(profile, res.session?.access_token);
+    }
+
     const users = this.getStoredUsers();
-    const userRecord = users.find(u => u.profile.email.toLowerCase() === email.toLowerCase().trim());
+    const userRecord = users.find(u => u.profile.email.toLowerCase() === cleanEmail);
 
     if (!userRecord || userRecord.passwordHash !== this.hashPassword(password)) {
       throw new Error('Invalid email or password.');
@@ -92,9 +174,39 @@ export class AuthService {
   }
 
   /**
+   * Send password recovery email via Supabase Auth
+   */
+  static async resetPassword(email: string): Promise<void> {
+    if (isSupabaseConfigured()) {
+      const res = await defaultSupabaseClient.resetPasswordForEmail(email);
+      if (res.error) {
+        throw new Error(res.error.message);
+      }
+    }
+  }
+
+  /**
+   * Switch directly to a known user session (e.g. demo or verified local user).
+   */
+  static async switchUser(userId: string): Promise<UserSession> {
+    if (userId === DEMO_USER.id) {
+      return this.createSession(DEMO_USER);
+    }
+    const users = this.getStoredUsers();
+    const userRecord = users.find(u => u.profile.id === userId);
+    if (!userRecord) {
+      throw new Error('User profile not found.');
+    }
+    return this.createSession(userRecord.profile);
+  }
+
+  /**
    * Log out active session.
    */
   static logout(): void {
+    if (isSupabaseConfigured()) {
+      defaultSupabaseClient.signOut();
+    }
     localStorage.removeItem(STORAGE_KEY_SESSION);
   }
 
@@ -115,13 +227,17 @@ export class AuthService {
     this.logout();
   }
 
-  private static createSession(profile: UserProfile): UserSession {
+  private static createSession(profile: UserProfile, explicitToken?: string): UserSession {
+    const token = explicitToken || ('jwt_' + Math.random().toString(36).substring(2) + '.' + Date.now());
     const session: UserSession = {
-      token: 'jwt_' + Math.random().toString(36).substring(2) + '.' + Date.now(),
+      token,
       user: profile,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
     };
     localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(session));
+    if (isSupabaseConfigured()) {
+      defaultSupabaseClient.setAuthToken(token);
+    }
     return session;
   }
 

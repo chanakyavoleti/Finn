@@ -111,6 +111,26 @@ export function multiplyMoney(amount: number, factor: number): number {
 }
 
 /**
+ * Divide monetary value safely avoiding division by zero.
+ */
+export function divideMoney(amount: number, divisor: number): number {
+  if (divisor === 0) return 0;
+  return Math.round((amount / divisor) * 100) / 100;
+}
+
+/**
+ * Parse string to numeric monetary amount.
+ */
+export function parseMoney(input: string): number {
+  if (!input) return 0;
+  const isNegative = input.includes('-');
+  const clean = input.replace(/[^\d.]/g, '');
+  const parsed = parseFloat(clean);
+  if (isNaN(parsed)) return 0;
+  return isNegative ? -parsed : parsed;
+}
+
+/**
  * Sanitize cell values for CSV export to prevent formula injection.
  * Escapes leading =, +, -, @, \t, \r with a single quote.
  */

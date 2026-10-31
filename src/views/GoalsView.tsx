@@ -36,6 +36,12 @@ export const GoalsView: React.FC = () => {
   const totalCurrent = goals.reduce((sum, g) => sum + g.currentAmount, 0);
   const overallProgress = totalTarget > 0 ? (totalCurrent / totalTarget) * 100 : 0;
 
+  const sortedGoals = [...goals].sort((a, b) => new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime());
+  const nearestGoal = sortedGoals[0];
+  const nearestDaysRemaining = nearestGoal 
+    ? Math.max(0, Math.ceil((new Date(nearestGoal.targetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 0;
+
   const handleAddGoal = (e: React.FormEvent) => {
     e.preventDefault();
     const target = parseFloat(targetAmount);
@@ -94,9 +100,9 @@ export const GoalsView: React.FC = () => {
         />
         <MetricCard
           label="Nearest Horizon"
-          value="Dec 31, 2026"
-          trend={{ value: '62 days remaining', isNeutral: true }}
-          secondaryContext="Emergency Reserve milestone (91.6%)"
+          value={nearestGoal ? nearestGoal.targetDate : 'No milestones'}
+          trend={{ value: nearestGoal ? `${nearestDaysRemaining} days remaining` : 'Set a target date', isNeutral: true }}
+          secondaryContext={nearestGoal ? `${nearestGoal.name} (${((nearestGoal.currentAmount / nearestGoal.targetAmount) * 100).toFixed(1)}%)` : 'Create your first capital objective'}
         />
       </div>
 

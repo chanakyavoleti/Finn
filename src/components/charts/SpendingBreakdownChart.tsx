@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useFinance } from '../../context/FinanceContext';
 
 export interface CategorySpend {
   name: string;
@@ -11,22 +12,22 @@ interface SpendingBreakdownChartProps {
   categories?: CategorySpend[];
 }
 
-const DEFAULT_CATEGORIES: CategorySpend[] = [
-  { name: 'Housing & Rent', amount: 2150, percentage: 32.4, color: '#1B4332' },
-  { name: 'Groceries & Staples', amount: 652, percentage: 9.8, color: '#2D6A4F' },
-  { name: 'Shopping & Discretionary', amount: 490, percentage: 7.4, color: '#52B788' },
-  { name: 'Dining & Cafes', amount: 388, percentage: 5.8, color: '#748E83' },
-  { name: 'Utilities & Internet', amount: 290, percentage: 4.4, color: '#3A506B' },
-  { name: 'Healthcare & Fitness', amount: 220, percentage: 3.3, color: '#9C7A5B' },
-  { name: 'Other Recurring', amount: 152, percentage: 2.3, color: '#8A928E' },
-];
-
 export const SpendingBreakdownChart: React.FC<SpendingBreakdownChartProps> = ({
-  categories = DEFAULT_CATEGORIES
+  categories: propCategories
 }) => {
+  const { categorySpending, formatAmount } = useFinance();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
+  const categories = propCategories && propCategories.length > 0 ? propCategories : categorySpending;
   const totalSpent = categories.reduce((sum, c) => sum + c.amount, 0);
+
+  if (categories.length === 0 || totalSpent === 0) {
+    return (
+      <div className="h-44 flex items-center justify-center text-xs text-[#8A928E] dark:text-[#6B7771] border border-dashed border-[#E8EAE6] dark:border-[#252E28] rounded-md">
+        No expense disbursements recorded to categorize.
+      </div>
+    );
+  }
 
   // SVG Donut calculation
   const size = 160;
@@ -78,14 +79,14 @@ export const SpendingBreakdownChart: React.FC<SpendingBreakdownChartProps> = ({
         </svg>
 
         {/* Center Readout */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
-          <span className="text-[10px] text-[#8A928E] dark:text-[#6B7771] uppercase tracking-wider font-medium">
-            {activeCategory ? 'Selected' : 'Total Spent'}
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2">
+          <span className="text-[10px] text-[#8A928E] dark:text-[#6B7771] uppercase tracking-wider font-medium truncate max-w-[90px]">
+            {activeCategory ? activeCategory : 'Total Spent'}
           </span>
-          <span className="text-base font-bold text-[#141716] dark:text-[#F0F3F1] tabular-nums">
-            ${activeCategory 
-              ? (categories.find(c => c.name === activeCategory)?.amount || 0).toLocaleString() 
-              : totalSpent.toLocaleString()
+          <span className="text-sm font-bold text-[#141716] dark:text-[#F0F3F1] tabular-nums">
+            {activeCategory 
+              ? formatAmount(categories.find(c => c.name === activeCategory)?.amount || 0)
+              : formatAmount(totalSpent)
             }
           </span>
           {activeCategory && (
@@ -98,7 +99,7 @@ export const SpendingBreakdownChart: React.FC<SpendingBreakdownChartProps> = ({
 
       {/* Categorical Breakdown List */}
       <div className="flex-1 w-full space-y-2">
-        {categories.slice(0, 5).map((cat) => {
+        {categories.slice(0, 6).map((cat) => {
           const isSelected = activeCategory === cat.name;
           return (
             <div
@@ -122,7 +123,7 @@ export const SpendingBreakdownChart: React.FC<SpendingBreakdownChartProps> = ({
               </div>
               <div className="flex items-center gap-3 shrink-0 tabular-nums">
                 <span className="font-medium text-[#141716] dark:text-[#F0F3F1]">
-                  ${cat.amount.toLocaleString()}
+                  {formatAmount(cat.amount)}
                 </span>
                 <span className="text-[11px] text-[#8A928E] dark:text-[#6B7771] w-9 text-right">
                   {cat.percentage}%
