@@ -105,6 +105,11 @@ interface FinanceContextType {
   categorySpending: CategorySpendData[];
 
   // Toast notifications
+  // Cloud Sync Status & Error States (AUD-HIGH-02 Remediation)
+  syncState: 'synced' | 'pending' | 'failed' | 'offline';
+  lastSyncError: string | null;
+  retrySync: () => Promise<void>;
+
   toasts: ToastMessage[];
   addToast: (title: string, type?: ToastMessage['type'], description?: string) => void;
   removeToast: (id: string) => void;
@@ -213,12 +218,90 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  // Persistent storage synchronizers - only writes when state changes, strictly keyed to activeUidRef
+  // Explicit Sync State tracking (AUD-HIGH-02)
+  const [syncState, setSyncState] = useState<'synced' | 'pending' | 'failed' | 'offline'>('synced');
+  const [lastSyncError, setLastSyncError] = useState<string | null>(null);
+
+  // Online / Offline resilience listener
+  useEffect(() => {
+    const handleOnline = () => {
+      setSyncState('pending');
+      const uid = activeUidRef.current;
+      if (uid && uid !== 'guest' && RepositoryFactory.getActiveStorageMode() === 'supabase') {
+        RepositoryFactory.getRepository().saveTransactions(uid, transactions).then(res => {
+          if (res.success) {
+            setSyncState('synced');
+            setLastSyncError(null);
+          } else {
+            setSyncState('failed');
+            setLastSyncError(res.error || 'Sync failed');
+          }
+        });
+      }
+    };
+    const handleOffline = () => {
+      setSyncState('offline');
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
+    }
+  }, [transactions]);
+
+  const retrySync = async () => {
+    const currentUid = activeUidRef.current;
+    if (!currentUid || currentUid === 'guest' || RepositoryFactory.getActiveStorageMode() !== 'supabase') return;
+    setSyncState('pending');
+    try {
+      const [txRes, accRes] = await Promise.all([
+        RepositoryFactory.getRepository().saveTransactions(currentUid, transactions),
+        RepositoryFactory.getRepository().saveAccounts(currentUid, accounts)
+      ]);
+      if (txRes.success && accRes.success) {
+        setSyncState('synced');
+        setLastSyncError(null);
+        addToast('Cloud Sync Succeeded', 'success', 'All modifications successfully saved to Supabase.');
+      } else {
+        setSyncState('failed');
+        const err = txRes.error || accRes.error || 'Sync failed';
+        setLastSyncError(err);
+        addToast('Sync Warning', 'warning', `Could not synchronize all changes: ${err}`);
+      }
+    } catch (e: any) {
+      setSyncState('failed');
+      setLastSyncError(e?.message || 'Network error');
+      addToast('Sync Error', 'warning', `Network error during sync: ${e?.message}`);
+    }
+  };
+
+  // Persistent storage synchronizers with explicit error handling & no silent swallowing
   useEffect(() => {
     const currentUid = activeUidRef.current;
     if (currentUid && currentUid !== 'guest') {
       localStorage.setItem(`finn_accounts_${currentUid}`, JSON.stringify(accounts));
-      RepositoryFactory.getRepository().saveAccounts(currentUid, accounts).catch(() => {});
+      if (RepositoryFactory.getActiveStorageMode() === 'supabase') {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          setSyncState('offline');
+          return;
+        }
+        setSyncState('pending');
+        RepositoryFactory.getRepository().saveAccounts(currentUid, accounts).then(res => {
+          if (res.success) {
+            setSyncState('synced');
+            setLastSyncError(null);
+          } else {
+            setSyncState('failed');
+            setLastSyncError(res.error || 'Accounts sync failed');
+          }
+        }).catch(err => {
+          setSyncState('failed');
+          setLastSyncError(err?.message || 'Network error');
+        });
+      }
     }
   }, [accounts]);
 
@@ -226,7 +309,25 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const currentUid = activeUidRef.current;
     if (currentUid && currentUid !== 'guest') {
       localStorage.setItem(`finn_transactions_${currentUid}`, JSON.stringify(transactions));
-      RepositoryFactory.getRepository().saveTransactions(currentUid, transactions).catch(() => {});
+      if (RepositoryFactory.getActiveStorageMode() === 'supabase') {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          setSyncState('offline');
+          return;
+        }
+        setSyncState('pending');
+        RepositoryFactory.getRepository().saveTransactions(currentUid, transactions).then(res => {
+          if (res.success) {
+            setSyncState('synced');
+            setLastSyncError(null);
+          } else {
+            setSyncState('failed');
+            setLastSyncError(res.error || 'Transactions sync failed');
+          }
+        }).catch(err => {
+          setSyncState('failed');
+          setLastSyncError(err?.message || 'Network error');
+        });
+      }
     }
   }, [transactions]);
 
@@ -234,7 +335,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const currentUid = activeUidRef.current;
     if (currentUid && currentUid !== 'guest') {
       localStorage.setItem(`finn_budgets_${currentUid}`, JSON.stringify(budgets));
-      RepositoryFactory.getRepository().saveBudgets(currentUid, budgets).catch(() => {});
+      if (RepositoryFactory.getActiveStorageMode() === 'supabase') {
+        RepositoryFactory.getRepository().saveBudgets(currentUid, budgets).catch(err => {
+          setSyncState('failed');
+          setLastSyncError(err?.message || 'Budgets sync error');
+        });
+      }
     }
   }, [budgets]);
 
@@ -242,7 +348,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const currentUid = activeUidRef.current;
     if (currentUid && currentUid !== 'guest') {
       localStorage.setItem(`finn_holdings_${currentUid}`, JSON.stringify(holdings));
-      RepositoryFactory.getRepository().saveHoldings(currentUid, holdings).catch(() => {});
+      if (RepositoryFactory.getActiveStorageMode() === 'supabase') {
+        RepositoryFactory.getRepository().saveHoldings(currentUid, holdings).catch(err => {
+          setSyncState('failed');
+          setLastSyncError(err?.message || 'Holdings sync error');
+        });
+      }
     }
   }, [holdings]);
 
@@ -250,7 +361,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const currentUid = activeUidRef.current;
     if (currentUid && currentUid !== 'guest') {
       localStorage.setItem(`finn_goals_${currentUid}`, JSON.stringify(goals));
-      RepositoryFactory.getRepository().saveGoals(currentUid, goals).catch(() => {});
+      if (RepositoryFactory.getActiveStorageMode() === 'supabase') {
+        RepositoryFactory.getRepository().saveGoals(currentUid, goals).catch(err => {
+          setSyncState('failed');
+          setLastSyncError(err?.message || 'Goals sync error');
+        });
+      }
     }
   }, [goals]);
 
@@ -258,7 +374,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const currentUid = activeUidRef.current;
     if (currentUid && currentUid !== 'guest') {
       localStorage.setItem(`finn_splitExpenses_${currentUid}`, JSON.stringify(splitExpenses));
-      RepositoryFactory.getRepository().saveSplitExpenses(currentUid, splitExpenses).catch(() => {});
+      if (RepositoryFactory.getActiveStorageMode() === 'supabase') {
+        RepositoryFactory.getRepository().saveSplitExpenses(currentUid, splitExpenses).catch(err => {
+          setSyncState('failed');
+          setLastSyncError(err?.message || 'Split expenses sync error');
+        });
+      }
     }
   }, [splitExpenses]);
 
@@ -973,6 +1094,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         metrics,
         monthlyCashFlow,
         categorySpending,
+        syncState,
+        lastSyncError,
+        retrySync,
         toasts,
         addToast,
         removeToast,

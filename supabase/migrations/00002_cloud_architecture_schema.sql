@@ -438,7 +438,13 @@ DROP POLICY IF EXISTS "transactions_select_own" ON public.transactions;
 CREATE POLICY "transactions_select_own" ON public.transactions FOR SELECT USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "transactions_insert_own" ON public.transactions;
-CREATE POLICY "transactions_insert_own" ON public.transactions FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "transactions_insert_own" ON public.transactions FOR INSERT 
+WITH CHECK (
+    auth.uid() = user_id AND 
+    EXISTS (SELECT 1 FROM public.accounts WHERE id = transactions.account_id AND user_id = auth.uid()) AND
+    (transactions.destination_account_id IS NULL OR EXISTS (SELECT 1 FROM public.accounts WHERE id = transactions.destination_account_id AND user_id = auth.uid())) AND
+    (transactions.category_id IS NULL OR EXISTS (SELECT 1 FROM public.categories WHERE id = transactions.category_id AND (user_id IS NULL OR user_id = auth.uid())))
+);
 
 DROP POLICY IF EXISTS "transactions_update_own" ON public.transactions;
 CREATE POLICY "transactions_update_own" ON public.transactions FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
@@ -451,7 +457,11 @@ DROP POLICY IF EXISTS "budgets_select_own" ON public.budgets;
 CREATE POLICY "budgets_select_own" ON public.budgets FOR SELECT USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "budgets_insert_own" ON public.budgets;
-CREATE POLICY "budgets_insert_own" ON public.budgets FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "budgets_insert_own" ON public.budgets FOR INSERT 
+WITH CHECK (
+    auth.uid() = user_id AND 
+    EXISTS (SELECT 1 FROM public.categories WHERE id = budgets.category_id AND (user_id IS NULL OR user_id = auth.uid()))
+);
 
 DROP POLICY IF EXISTS "budgets_update_own" ON public.budgets;
 CREATE POLICY "budgets_update_own" ON public.budgets FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
@@ -464,7 +474,11 @@ DROP POLICY IF EXISTS "investments_select_own" ON public.investments;
 CREATE POLICY "investments_select_own" ON public.investments FOR SELECT USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "investments_insert_own" ON public.investments;
-CREATE POLICY "investments_insert_own" ON public.investments FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "investments_insert_own" ON public.investments FOR INSERT 
+WITH CHECK (
+    auth.uid() = user_id AND 
+    (investments.account_id IS NULL OR EXISTS (SELECT 1 FROM public.accounts WHERE id = investments.account_id AND user_id = auth.uid()))
+);
 
 DROP POLICY IF EXISTS "investments_update_own" ON public.investments;
 CREATE POLICY "investments_update_own" ON public.investments FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
@@ -503,7 +517,12 @@ DROP POLICY IF EXISTS "goal_contrib_select_own" ON public.goal_contributions;
 CREATE POLICY "goal_contrib_select_own" ON public.goal_contributions FOR SELECT USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "goal_contrib_insert_own" ON public.goal_contributions;
-CREATE POLICY "goal_contrib_insert_own" ON public.goal_contributions FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "goal_contrib_insert_own" ON public.goal_contributions FOR INSERT 
+WITH CHECK (
+    auth.uid() = user_id AND 
+    EXISTS (SELECT 1 FROM public.savings_goals WHERE id = goal_contributions.goal_id AND user_id = auth.uid()) AND
+    (goal_contributions.account_id IS NULL OR EXISTS (SELECT 1 FROM public.accounts WHERE id = goal_contributions.account_id AND user_id = auth.uid()))
+);
 
 DROP POLICY IF EXISTS "goal_contrib_update_own" ON public.goal_contributions;
 CREATE POLICY "goal_contrib_update_own" ON public.goal_contributions FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);

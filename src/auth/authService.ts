@@ -1,6 +1,7 @@
 /**
  * FINN Authentication & Multi-User Isolation Service
- * Enforces session tokens, password hashing simulations, user isolation boundaries,
+ * Enforces session tokens, NIST-grade PBKDF2 password derivation for offline profiles,
+ * Supabase GoTrue cloud authentication delegation, user isolation boundaries,
  * and role-based permissions mirroring PostgreSQL Row Level Security (RLS).
  */
 
@@ -142,8 +143,9 @@ export class AuthService {
       createdAt: new Date().toISOString(),
     };
 
-    // Store user with hashed password simulation
-    users.push({ profile, passwordHash: this.hashPassword(password) });
+    // Store user with OWASP-recommended PBKDF2 (100,000 iterations, 16-byte cryptographically secure salt)
+    const passwordHash = await this.hashPasswordPBKDF2(password);
+    users.push({ profile, passwordHash });
     localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
 
     return this.createSession(profile);
@@ -183,7 +185,7 @@ export class AuthService {
           return this.createSession(profile, res.session?.access_token);
         }
       } catch (e: any) {
-        if (!e.message.includes('fetch failed') && !e.message.includes('Network error') && !e.message.includes('Invalid email or password')) {
+        if (!e.message.includes('fetch failed') && !e.message.includes('Network error') && !e.message.includes('Invalid email or password') && !e.message.includes('Invalid login credentials')) {
           throw e;
         }
       }
@@ -192,7 +194,13 @@ export class AuthService {
     const users = this.getStoredUsers();
     const userRecord = users.find(u => u.profile.email.toLowerCase() === cleanEmail);
 
-    if (!userRecord || userRecord.passwordHash !== this.hashPassword(password)) {
+    if (!userRecord) {
+      throw new Error('Invalid email or password.');
+    }
+
+    // Verify password against PBKDF2 hash
+    const isValid = await this.verifyPasswordPBKDF2(password, userRecord.passwordHash);
+    if (!isValid) {
       throw new Error('Invalid email or password.');
     }
 
@@ -246,10 +254,33 @@ export class AuthService {
 
   /**
    * Permanently delete user account and associated credentials.
+   * Purges server-side PostgreSQL records via RPC delete_user_account when connected to Supabase,
+   * then purges all user-keyed local caches.
    */
   static async deleteAccount(userId: string): Promise<void> {
+    if (isSupabaseConfigured() && RepositoryFactory.getActiveStorageMode() === 'supabase') {
+      try {
+        await defaultSupabaseClient.rpc('delete_user_account');
+      } catch (err) {
+        console.warn('Server-side user purge encountered error or offline:', err);
+      }
+    }
+
+    // Remove user profile from local registry
     const users = this.getStoredUsers().filter(u => u.profile.id !== userId);
     localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+
+    // Clear all associated client caches for this user
+    const prefixes = [
+      `finn_accounts_${userId}`,
+      `finn_transactions_${userId}`,
+      `finn_budgets_${userId}`,
+      `finn_holdings_${userId}`,
+      `finn_goals_${userId}`,
+      `finn_splitExpenses_${userId}`
+    ];
+    prefixes.forEach(key => localStorage.removeItem(key));
+
     this.logout();
   }
 
@@ -276,13 +307,93 @@ export class AuthService {
     }
   }
 
-  private static hashPassword(password: string): string {
-    // Deterministic simulation hash for local verification
-    let hash = 0;
-    for (let i = 0; i < password.length; i++) {
-      hash = (hash << 5) - hash + password.charCodeAt(i);
-      hash |= 0;
+  /**
+   * Derive PBKDF2-HMAC-SHA256 hash with 100,000 iterations for offline demo/local users.
+   * Format: pbkdf2:100000:<saltHex>:<hashHex>
+   */
+  private static async hashPasswordPBKDF2(password: string, existingSaltHex?: string): Promise<string> {
+    const iterations = 100000;
+    let salt: Uint8Array;
+    if (existingSaltHex) {
+      const matches = existingSaltHex.match(/.{1,2}/g) || [];
+      salt = new Uint8Array(matches.map(byte => parseInt(byte, 16)));
+    } else {
+      salt = new Uint8Array(16);
+      if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+        window.crypto.getRandomValues(salt);
+      } else if (typeof globalThis !== 'undefined' && globalThis.crypto && globalThis.crypto.getRandomValues) {
+        globalThis.crypto.getRandomValues(salt);
+      } else {
+        // Fallback salt generation for non-browser environments
+        for (let i = 0; i < 16; i++) salt[i] = Math.floor(Math.random() * 256);
+      }
     }
-    return 'hsh_' + Math.abs(hash).toString(16);
+
+    const subtle = (typeof window !== 'undefined' && window.crypto && window.crypto.subtle)
+      ? window.crypto.subtle
+      : (typeof globalThis !== 'undefined' && globalThis.crypto && globalThis.crypto.subtle ? globalThis.crypto.subtle : null);
+
+    if (subtle) {
+      const enc = new TextEncoder();
+      const keyMaterial = await subtle.importKey(
+        'raw',
+        enc.encode(password),
+        { name: 'PBKDF2' },
+        false,
+        ['deriveBits']
+      );
+
+      const derivedBits = await subtle.deriveBits(
+        {
+          name: 'PBKDF2',
+          salt: salt as any,
+          iterations,
+          hash: 'SHA-256'
+        },
+        keyMaterial,
+        256
+      );
+
+      const hashHex = Array.from(new Uint8Array(derivedBits))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+      const saltHex = Array.from(salt)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+
+      return `pbkdf2:${iterations}:${saltHex}:${hashHex}`;
+    }
+
+    // Deterministic fallback if Web Crypto is completely unavailable
+    let fallbackHash = 0;
+    for (let i = 0; i < password.length; i++) {
+      fallbackHash = (fallbackHash << 5) - fallbackHash + password.charCodeAt(i);
+      fallbackHash |= 0;
+    }
+    const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
+    return `pbkdf2:fallback:${saltHex}:${Math.abs(fallbackHash).toString(16)}`;
+  }
+
+  private static async verifyPasswordPBKDF2(password: string, storedHash: string): Promise<boolean> {
+    if (!storedHash) return false;
+    // Check PBKDF2 format
+    if (storedHash.startsWith('pbkdf2:')) {
+      const parts = storedHash.split(':');
+      if (parts.length !== 4) return false;
+      const [, , saltHex, expectedHashHex] = parts;
+      const computed = await this.hashPasswordPBKDF2(password, saltHex);
+      const computedHashHex = computed.split(':')[3];
+      return computedHashHex === expectedHashHex;
+    }
+    // Backward compatibility for legacy test accounts starting with hsh_
+    if (storedHash.startsWith('hsh_')) {
+      let legacy = 0;
+      for (let i = 0; i < password.length; i++) {
+        legacy = (legacy << 5) - legacy + password.charCodeAt(i);
+        legacy |= 0;
+      }
+      return storedHash === 'hsh_' + Math.abs(legacy).toString(16);
+    }
+    return false;
   }
 }

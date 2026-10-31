@@ -147,6 +147,77 @@ export class SupabaseClientAdapter {
     }
   }
 
+
+  /**
+   * Universal PostgREST RPC function execution: POST /rest/v1/rpc/{functionName}
+   */
+  public async rpc<T = any>(
+    functionName: string,
+    params: Record<string, any> = {}
+  ): Promise<SupabaseResponse<T>> {
+    if (!this.isConfigured() || !this.config) {
+      return {
+        data: null,
+        error: { message: 'Supabase is not configured. Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY.' },
+        status: 0
+      };
+    }
+
+    try {
+      const url = `${this.config.url.replace(/\/$/, '')}/rest/v1/rpc/${functionName}`;
+      const reqHeaders: Record<string, string> = {
+        'apikey': this.config.anonKey,
+        'Content-Type': 'application/json'
+      };
+
+      if (this.currentAccessToken) {
+        reqHeaders['Authorization'] = `Bearer ${this.currentAccessToken}`;
+      } else {
+        reqHeaders['Authorization'] = `Bearer ${this.config.anonKey}`;
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: reqHeaders,
+        body: JSON.stringify(params)
+      });
+
+      let resData: any = null;
+      const text = await response.text();
+      if (text) {
+        try {
+          resData = JSON.parse(text);
+        } catch {
+          resData = text;
+        }
+      }
+
+      if (!response.ok) {
+        return {
+          data: null,
+          error: {
+            message: resData?.message || `RPC ${functionName} failed with HTTP ${response.status}`,
+            details: resData?.details || resData?.hint,
+            code: resData?.code || String(response.status)
+          },
+          status: response.status
+        };
+      }
+
+      return {
+        data: resData as T,
+        error: null,
+        status: response.status
+      };
+    } catch (err: any) {
+      return {
+        data: null,
+        error: { message: err?.message || `Network error executing RPC ${functionName}` },
+        status: 0
+      };
+    }
+  }
+
   // ============================================================================
   // GENUINE SUPABASE AUTHENTICATION API METHODS (/auth/v1)
   // ============================================================================

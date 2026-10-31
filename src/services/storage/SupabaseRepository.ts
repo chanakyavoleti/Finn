@@ -52,8 +52,33 @@ export class SupabaseRepository implements FinanceRepository {
 
   async saveAccounts(userId: string, accounts: Account[]): Promise<RepositoryResult<Account[]>> {
     try {
-      for (const acc of accounts) {
-        await this.addAccount(userId, acc);
+      if (accounts.length === 0) return { success: true, data: [] };
+      const rows = accounts.map(account => {
+        const accId = ensureValidUuid(account.id);
+        const dbAccountType = account.type === 'checking' ? 'current' : (account.type === 'credit' ? 'credit_card' : account.type);
+        return {
+          id: accId,
+          user_id: userId,
+          account_name: account.name,
+          institution_name: account.institution,
+          account_type: dbAccountType,
+          currency: account.currency || 'INR',
+          opening_balance: account.balance,
+          current_balance: account.balance,
+          account_number_mask: account.accountNumberMask,
+          is_active: true,
+          connection_mode: 'manual'
+        };
+      });
+
+      const res = await this.client.query('accounts', 'POST', {
+        body: rows,
+        headers: {
+          'Prefer': 'resolution=merge-duplicates,return=minimal'
+        }
+      });
+      if (res.error) {
+        return { success: false, error: res.error.message };
       }
       return { success: true, data: accounts };
     } catch (e: any) {
@@ -152,13 +177,77 @@ export class SupabaseRepository implements FinanceRepository {
 
   async saveTransactions(userId: string, transactions: Transaction[]): Promise<RepositoryResult<Transaction[]>> {
     try {
-      for (const tx of transactions) {
-        await this.addTransaction(userId, tx);
+      if (transactions.length === 0) return { success: true, data: [] };
+
+      const BATCH_SIZE = 500;
+      for (let i = 0; i < transactions.length; i += BATCH_SIZE) {
+        const batch = transactions.slice(i, i + BATCH_SIZE);
+        const rows = batch.map(tx => ({
+          id: ensureValidUuid(tx.id),
+          user_id: userId,
+          account_id: ensureValidUuid(tx.accountId),
+          destination_account_id: tx.destinationAccountId ? ensureValidUuid(tx.destinationAccountId) : null,
+          original_transaction_id: tx.originalTransactionId ? ensureValidUuid(tx.originalTransactionId) : null,
+          title: tx.merchant || tx.description || 'Transaction',
+          merchant: tx.merchant || 'Unknown',
+          transaction_date: tx.date,
+          amount: tx.amount,
+          currency: tx.currency || 'INR',
+          transaction_type: tx.type,
+          category_name: tx.category,
+          payment_method: tx.paymentMethod || 'other',
+          upi_vpa: tx.upiId || null,
+          upi_utr_number: tx.utrNumber || null,
+          notes: tx.description || '',
+          tags: tx.tags || [],
+          status: tx.status || 'posted'
+        }));
+
+        const res = await this.client.query('transactions', 'POST', {
+          body: rows,
+          headers: {
+            'Prefer': 'resolution=merge-duplicates,return=minimal'
+          }
+        });
+
+        if (res.error) {
+          console.error(`Bulk saveTransactions failed for batch ${i}-${i + batch.length}:`, res.error.message);
+          return { success: false, error: res.error.message };
+        }
       }
+
       return { success: true, data: transactions };
     } catch (e: any) {
       return { success: false, error: e?.message || 'Failed to save transactions' };
     }
+  }
+
+  /**
+   * Atomic Transfer via PostgreSQL Stored Procedure (execute_transfer)
+   */
+  async executeTransfer(
+    userId: string,
+    sourceAccountId: string,
+    destinationAccountId: string,
+    amount: number,
+    title: string,
+    exchangeRate: number = 1.0,
+    destinationAmount?: number,
+    notes?: string
+  ): Promise<RepositoryResult<any>> {
+    const res = await this.client.rpc('execute_transfer', {
+      p_source_account_id: ensureValidUuid(sourceAccountId),
+      p_destination_account_id: ensureValidUuid(destinationAccountId),
+      p_amount: amount,
+      p_title: title,
+      p_exchange_rate: exchangeRate,
+      p_destination_amount: destinationAmount || null,
+      p_notes: notes || null
+    });
+    if (res.error) {
+      return { success: false, error: res.error.message };
+    }
+    return { success: true, data: res.data };
   }
 
   async addTransaction(userId: string, transaction: Transaction): Promise<RepositoryResult<Transaction>> {

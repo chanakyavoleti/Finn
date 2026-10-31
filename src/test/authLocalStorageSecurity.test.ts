@@ -122,7 +122,7 @@ describe('Phase 4: Authentication & LocalStorage Security Attack Suite', () => {
     const rawUsers = localStorage.getItem('finn_registered_users');
     expect(rawUsers).not.toBeNull();
     expect(rawUsers!.includes('SecretPass123!')).toBe(false);
-    expect(rawUsers!.includes('hsh_')).toBe(true);
+    expect(rawUsers!.includes('pbkdf2:') || rawUsers!.includes('hsh_')).toBe(true);
   });
 
   // 8. Duplicate Registration & Email Collision Prevention
