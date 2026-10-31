@@ -2,6 +2,22 @@ import { Account, Transaction, Budget, Holding, SavingsGoal, SplitExpense } from
 import { FinanceRepository, RepositoryResult } from './FinanceRepository';
 import { SupabaseClientAdapter, defaultSupabaseClient } from '../supabaseClient';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function ensureValidUuid(id?: string): string {
+  if (id && UUID_REGEX.test(id)) {
+    return id;
+  }
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export class SupabaseRepository implements FinanceRepository {
   private client: SupabaseClientAdapter;
 
@@ -46,9 +62,10 @@ export class SupabaseRepository implements FinanceRepository {
   }
 
   async addAccount(userId: string, account: Account): Promise<RepositoryResult<Account>> {
+    const accId = ensureValidUuid(account.id);
     const dbAccountType = account.type === 'checking' ? 'current' : (account.type === 'credit' ? 'credit_card' : account.type);
     const payload = {
-      id: account.id,
+      id: accId,
       user_id: userId,
       account_name: account.name,
       institution_name: account.institution,
@@ -68,7 +85,7 @@ export class SupabaseRepository implements FinanceRepository {
     if (res.error) {
       return { success: false, error: res.error.message };
     }
-    return { success: true, data: account };
+    return { success: true, data: { ...account, id: accId } };
   }
 
   async updateAccount(userId: string, accountId: string, updates: Partial<Account>): Promise<RepositoryResult<Account>> {
@@ -145,12 +162,14 @@ export class SupabaseRepository implements FinanceRepository {
   }
 
   async addTransaction(userId: string, transaction: Transaction): Promise<RepositoryResult<Transaction>> {
+    const txId = ensureValidUuid(transaction.id);
+    const accId = ensureValidUuid(transaction.accountId);
     const payload = {
-      id: transaction.id,
+      id: txId,
       user_id: userId,
-      account_id: transaction.accountId,
-      destination_account_id: transaction.destinationAccountId || null,
-      original_transaction_id: transaction.originalTransactionId || null,
+      account_id: accId,
+      destination_account_id: transaction.destinationAccountId ? ensureValidUuid(transaction.destinationAccountId) : null,
+      original_transaction_id: transaction.originalTransactionId ? ensureValidUuid(transaction.originalTransactionId) : null,
       title: transaction.merchant || transaction.description || 'Transaction',
       merchant: transaction.merchant || 'Unknown',
       transaction_date: transaction.date,
@@ -173,7 +192,7 @@ export class SupabaseRepository implements FinanceRepository {
     if (res.error) {
       return { success: false, error: res.error.message };
     }
-    return { success: true, data: transaction };
+    return { success: true, data: { ...transaction, id: txId } };
   }
 
   async updateTransaction(userId: string, transactionId: string, updates: Partial<Transaction>): Promise<RepositoryResult<Transaction>> {
@@ -247,11 +266,31 @@ export class SupabaseRepository implements FinanceRepository {
     const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
     const endDate = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
 
+    const budgetId = ensureValidUuid(budget.id);
+    const categoryId = ensureValidUuid(budget.categoryId);
+    const categoryName = budget.categoryName || 'General';
+
+    // Ensure category exists in public.categories so foreign key constraint is satisfied
+    try {
+      await this.client.query('categories', 'POST', {
+        body: {
+          id: categoryId,
+          user_id: userId,
+          name: categoryName,
+          icon: 'tag',
+          category_group: 'wants',
+          is_custom: true
+        }
+      });
+    } catch {
+      // Ignore if category already exists
+    }
+
     const payload = {
-      id: budget.id,
+      id: budgetId,
       user_id: userId,
-      category_id: budget.categoryId,
-      category_name: budget.categoryName,
+      category_id: categoryId,
+      category_name: categoryName,
       monthly_limit: budget.limit,
       start_date: startDate,
       end_date: endDate,
@@ -260,7 +299,7 @@ export class SupabaseRepository implements FinanceRepository {
 
     const res = await this.client.query('budgets', 'POST', { body: payload });
     if (res.error) return { success: false, error: res.error.message };
-    return { success: true, data: budget };
+    return { success: true, data: { ...budget, id: budgetId, categoryId } };
   }
 
   async updateBudget(userId: string, budgetId: string, updates: Partial<Budget>): Promise<RepositoryResult<Budget>> {
@@ -318,21 +357,26 @@ export class SupabaseRepository implements FinanceRepository {
   }
 
   async addGoal(userId: string, goal: SavingsGoal): Promise<RepositoryResult<SavingsGoal>> {
+    const validCategories = ['emergency_fund', 'retirement', 'home_purchase', 'vehicle', 'education', 'travel', 'general', 'other'];
+    const rawCat = (goal.category || 'general').toLowerCase().replace(/[\s-]+/g, '_');
+    const dbCategory = validCategories.includes(rawCat) ? rawCat : 'general';
+    const goalId = ensureValidUuid(goal.id);
+
     const payload = {
-      id: goal.id,
+      id: goalId,
       user_id: userId,
       name: goal.name,
       target_amount: goal.targetAmount,
       current_amount: goal.currentAmount,
       target_date: goal.targetDate,
       monthly_contribution: goal.monthlyContribution,
-      category: goal.category,
+      category: dbCategory,
       notes: goal.notes || ''
     };
 
     const res = await this.client.query('savings_goals', 'POST', { body: payload });
     if (res.error) return { success: false, error: res.error.message };
-    return { success: true, data: goal };
+    return { success: true, data: { ...goal, id: goalId } };
   }
 
   async updateGoal(userId: string, goalId: string, updates: Partial<SavingsGoal>): Promise<RepositoryResult<SavingsGoal>> {

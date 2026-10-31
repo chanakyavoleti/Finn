@@ -163,8 +163,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const isDemoUid = (id: string) => id === 'usr_demo' || id === 'demo';
 
-  const generateUniqueId = (prefix: string) => 
-    `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const generateUniqueId = (prefix: string) => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  };
 
   const isBudgetCategoryMatch = (budget: Budget, txCategory?: string): boolean => {
     if (!txCategory) return false;

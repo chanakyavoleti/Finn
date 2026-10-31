@@ -22,7 +22,9 @@ export class SupabaseClientAdapter {
   private currentAccessToken: string | null = null;
 
   constructor(config?: SupabaseConfig | null) {
-    if (config && config.url && config.anonKey) {
+    if (config === null) {
+      this.config = null;
+    } else if (config && config.url && config.anonKey) {
       this.config = config;
     } else {
       this.config = this.loadConfigFromEnv();

@@ -5,6 +5,7 @@
  */
 
 import { isSupabaseConfigured, defaultSupabaseClient } from '../services/supabaseClient';
+import { RepositoryFactory } from '../services/storage/RepositoryFactory';
 
 export interface UserProfile {
   id: string;
@@ -83,33 +84,46 @@ export class AuthService {
       throw new Error('Password must be at least 8 characters long.');
     }
 
-    if (isSupabaseConfigured()) {
-      const res = await defaultSupabaseClient.signUp(email, password, { full_name: fullName });
-      if (res.error) {
-        throw new Error(res.error.message);
-      }
-      const userId = res.user?.id || 'usr_' + Math.random().toString(36).substring(2, 10);
-      const profile: UserProfile = {
-        id: userId,
-        email: email.toLowerCase().trim(),
-        fullName: fullName.trim(),
-        defaultCurrency: 'INR',
-        fiscalYearType: 'indian',
-        createdAt: new Date().toISOString(),
-      };
+    const mode = RepositoryFactory.getActiveStorageMode();
+    if (mode === 'supabase' && isSupabaseConfigured()) {
+      try {
+        const res = await defaultSupabaseClient.signUp(email, password, { full_name: fullName });
+        if (res.error) {
+          if (res.error.message.includes('fetch failed') || res.error.message.includes('Network error')) {
+            console.warn('Supabase Auth offline/unreachable, falling back to local registration.');
+          } else {
+            throw new Error(res.error.message);
+          }
+        } else {
+          const userId = res.user?.id || 'usr_' + Math.random().toString(36).substring(2, 10);
+          const profile: UserProfile = {
+            id: userId,
+            email: email.toLowerCase().trim(),
+            fullName: fullName.trim(),
+            defaultCurrency: 'INR',
+            fiscalYearType: 'indian',
+            createdAt: new Date().toISOString(),
+          };
 
-      // Ingest into public.profiles
-      await defaultSupabaseClient.query('profiles', 'POST', {
-        body: {
-          id: userId,
-          email: profile.email,
-          full_name: profile.fullName,
-          default_currency: profile.defaultCurrency,
-          fiscal_year_type: profile.fiscalYearType
+          // Ingest into public.profiles
+          await defaultSupabaseClient.query('profiles', 'POST', {
+            body: {
+              id: userId,
+              email: profile.email,
+              full_name: profile.fullName,
+              default_currency: profile.defaultCurrency,
+              fiscal_year_type: profile.fiscalYearType
+            }
+          });
+
+          return this.createSession(profile, res.session?.access_token);
         }
-      });
-
-      return this.createSession(profile, res.session?.access_token);
+      } catch (e: any) {
+        if (!e.message.includes('fetch failed') && !e.message.includes('Network error') && !e.message.includes('A valid email') && !e.message.includes('Password must be')) {
+          throw e;
+        }
+        console.warn('Supabase Auth network error, falling back to local registration:', e.message);
+      }
     }
 
     const users = this.getStoredUsers();
@@ -146,21 +160,33 @@ export class AuthService {
       return this.createSession(DEMO_USER);
     }
 
-    if (isSupabaseConfigured()) {
-      const res = await defaultSupabaseClient.signInWithPassword(cleanEmail, password);
-      if (res.error) {
-        throw new Error(res.error.message);
+    const mode = RepositoryFactory.getActiveStorageMode();
+    if (mode === 'supabase' && isSupabaseConfigured()) {
+      try {
+        const res = await defaultSupabaseClient.signInWithPassword(cleanEmail, password);
+        if (res.error) {
+          if (res.error.message.includes('fetch failed') || res.error.message.includes('Network error')) {
+            console.warn('Supabase Auth offline/unreachable, falling back to local login verification.');
+          } else {
+            throw new Error(res.error.message);
+          }
+        } else if (res.user) {
+          const user = res.user;
+          const profile: UserProfile = {
+            id: user.id,
+            email: user.email,
+            fullName: user.user_metadata?.full_name || cleanEmail.split('@')[0],
+            defaultCurrency: 'INR',
+            fiscalYearType: 'indian',
+            createdAt: user.created_at || new Date().toISOString(),
+          };
+          return this.createSession(profile, res.session?.access_token);
+        }
+      } catch (e: any) {
+        if (!e.message.includes('fetch failed') && !e.message.includes('Network error') && !e.message.includes('Invalid email or password')) {
+          throw e;
+        }
       }
-      const user = res.user;
-      const profile: UserProfile = {
-        id: user.id,
-        email: user.email,
-        fullName: user.user_metadata?.full_name || cleanEmail.split('@')[0],
-        defaultCurrency: 'INR',
-        fiscalYearType: 'indian',
-        createdAt: user.created_at || new Date().toISOString(),
-      };
-      return this.createSession(profile, res.session?.access_token);
     }
 
     const users = this.getStoredUsers();
