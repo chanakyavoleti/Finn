@@ -47,7 +47,7 @@ while ((policyMatch = policyRegex.exec(content)) !== null) {
   }
 }
 
-console.log(`Found ${policyCount} total RLS policies.`);
+console.log(`Found ${policyCount} total RLS CREATE POLICY statements.`);
 
 if (earlyPolicies.length > 0) {
   console.error('ERROR: Policies created before all tables exist:', earlyPolicies);
@@ -92,4 +92,36 @@ for (const table of createdTables) {
 }
 
 console.log('SUCCESS: All 17 tables have RLS explicitly enabled!');
-console.log('--- ALL MIGRATION ORDER & DEPENDENCY CHECKS PASSED ---');
+
+// 6. Verify DROP POLICY statements are strictly formed with no inline FOR/USING/WITH CHECK
+const lines = content.split(/\r?\n/);
+let malformedDrops = 0;
+let dropCount = 0;
+
+lines.forEach((line, idx) => {
+  const trimmed = line.trim();
+  if (trimmed.startsWith('DROP POLICY')) {
+    dropCount++;
+    if (/\b(FOR|USING|WITH CHECK)\b/i.test(trimmed)) {
+      console.error(`ERROR: Line ${idx + 1} has malformed DROP POLICY containing policy definition clauses: ${trimmed}`);
+      malformedDrops++;
+    }
+    if (!trimmed.endsWith(';')) {
+      console.error(`ERROR: Line ${idx + 1} has DROP POLICY without trailing semicolon: ${trimmed}`);
+      malformedDrops++;
+    }
+  }
+});
+
+if (malformedDrops > 0) {
+  console.error(`ERROR: Found ${malformedDrops} malformed DROP POLICY statements.`);
+  process.exit(1);
+}
+
+if (dropCount !== policyCount) {
+  console.error(`ERROR: Policy count mismatch: ${dropCount} DROP POLICY vs ${policyCount} CREATE POLICY`);
+  process.exit(1);
+}
+
+console.log(`SUCCESS: All ${dropCount} DROP POLICY statements are strictly formed and match all ${policyCount} CREATE POLICY statements!`);
+console.log('--- ALL MIGRATION ORDER, SYNTAX & DEPENDENCY CHECKS PASSED ---');

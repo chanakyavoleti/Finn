@@ -492,7 +492,8 @@ CREATE POLICY "savings_goals_select_own" ON public.savings_goals FOR SELECT USIN
 DROP POLICY IF EXISTS "savings_goals_insert_own" ON public.savings_goals;
 CREATE POLICY "savings_goals_insert_own" ON public.savings_goals FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "savings_goals_update_own" ON public.savings_goals FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "savings_goals_update_own" ON public.savings_goals;
+CREATE POLICY "savings_goals_update_own" ON public.savings_goals FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "savings_goals_delete_own" ON public.savings_goals;
 CREATE POLICY "savings_goals_delete_own" ON public.savings_goals FOR DELETE USING (auth.uid() = user_id);
