@@ -190,7 +190,10 @@ CREATE OR REPLACE FUNCTION public.execute_transfer(
     p_destination_amount NUMERIC(15, 2) DEFAULT NULL,
     p_notes TEXT DEFAULT NULL
 )
-RETURNS JSONB AS $$
+RETURNS JSONB 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp AS $
 DECLARE
     v_user_id UUID := auth.uid();
     v_source_acc public.accounts%ROWTYPE;
@@ -310,13 +313,19 @@ BEGIN
         'exchange_rate', v_rate
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$;
+
+REVOKE ALL ON FUNCTION public.execute_transfer(UUID, UUID, NUMERIC, TEXT, NUMERIC, NUMERIC, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.execute_transfer(UUID, UUID, NUMERIC, TEXT, NUMERIC, NUMERIC, TEXT) TO authenticated;
 
 -- ------------------------------------------------------------------------------
 -- 7. SECURE SERVER-SIDE ACCOUNT DELETION (Fix AUD-MED-05)
 -- ------------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.delete_user_account()
-RETURNS JSONB AS $$
+RETURNS JSONB 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp AS $
 DECLARE
     v_user_id UUID := auth.uid();
 BEGIN
@@ -325,9 +334,8 @@ BEGIN
     END IF;
 
     -- Delete all child records in strict topological order
+    -- Note: bill_settlements and bill_splits cascade on bill_groups and bill_participants
     DELETE FROM public.audit_logs WHERE user_id = v_user_id;
-    DELETE FROM public.bill_settlements WHERE user_id = v_user_id;
-    DELETE FROM public.bill_splits WHERE user_id = v_user_id;
     DELETE FROM public.bill_participants WHERE user_id = v_user_id;
     DELETE FROM public.bill_groups WHERE creator_id = v_user_id;
     DELETE FROM public.goal_contributions WHERE user_id = v_user_id;
@@ -348,4 +356,7 @@ BEGIN
         'deleted_at', timezone('utc'::text, now())
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$;
+
+REVOKE ALL ON FUNCTION public.delete_user_account() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.delete_user_account() TO authenticated;
